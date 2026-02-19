@@ -1,0 +1,316 @@
+import { useState, useCallback } from 'react'
+import { v4 as uuidv4 } from 'uuid'
+
+const STORAGE_KEY = 'todo-app-data'
+
+const defaultData = {
+  groups: [
+    { id: 'default-group', name: 'My Lists', listIds: ['list-tasks'], personId: null },
+  ],
+  lists: [
+    { id: 'list-tasks', name: 'Tasks', icon: 'home', color: '#788CDE' },
+  ],
+  tasks: [],
+  people: [],
+  tags: [],
+}
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (!parsed.people) parsed.people = []
+      if (!parsed.tags) parsed.tags = []
+      parsed.groups = parsed.groups.map((g) => ({
+        personId: null,
+        ...g,
+      }))
+      parsed.tasks = parsed.tasks.map((t) => ({
+        startDate: null,
+        endDate: null,
+        assigneeId: null,
+        priority: 'none',
+        tagIds: [],
+        ...t,
+      }))
+      return parsed
+    }
+  } catch {}
+  return defaultData
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+}
+
+export function useStore() {
+  const [data, setData] = useState(loadData)
+
+  const update = useCallback((updater) => {
+    setData((prev) => {
+      const next = updater(prev)
+      saveData(next)
+      return next
+    })
+  }, [])
+
+  const addTask = useCallback((listId, title) => {
+    const task = {
+      id: uuidv4(),
+      listId,
+      title,
+      completed: false,
+      important: false,
+      createdAt: new Date().toISOString(),
+      dueDate: null,
+      startDate: null,
+      endDate: null,
+      assigneeId: null,
+      priority: 'none',
+      tagIds: [],
+      note: '',
+      subtasks: [],
+    }
+    update((d) => ({ ...d, tasks: [...d.tasks, task] }))
+    return task
+  }, [update])
+
+  const toggleTask = useCallback((taskId) => {
+    update((d) => ({
+      ...d,
+      tasks: d.tasks.map((t) =>
+        t.id === taskId ? { ...t, completed: !t.completed } : t
+      ),
+    }))
+  }, [update])
+
+  const toggleImportant = useCallback((taskId) => {
+    update((d) => ({
+      ...d,
+      tasks: d.tasks.map((t) =>
+        t.id === taskId ? { ...t, important: !t.important } : t
+      ),
+    }))
+  }, [update])
+
+  const deleteTask = useCallback((taskId) => {
+    update((d) => ({
+      ...d,
+      tasks: d.tasks.filter((t) => t.id !== taskId),
+    }))
+  }, [update])
+
+  const updateTask = useCallback((taskId, changes) => {
+    update((d) => ({
+      ...d,
+      tasks: d.tasks.map((t) =>
+        t.id === taskId ? { ...t, ...changes } : t
+      ),
+    }))
+  }, [update])
+
+  const addSubtask = useCallback((taskId, title) => {
+    const subtask = { id: uuidv4(), title, completed: false }
+    update((d) => ({
+      ...d,
+      tasks: d.tasks.map((t) =>
+        t.id === taskId
+          ? { ...t, subtasks: [...t.subtasks, subtask] }
+          : t
+      ),
+    }))
+  }, [update])
+
+  const toggleSubtask = useCallback((taskId, subtaskId) => {
+    update((d) => ({
+      ...d,
+      tasks: d.tasks.map((t) =>
+        t.id === taskId
+          ? {
+              ...t,
+              subtasks: t.subtasks.map((s) =>
+                s.id === subtaskId ? { ...s, completed: !s.completed } : s
+              ),
+            }
+          : t
+      ),
+    }))
+  }, [update])
+
+  const deleteSubtask = useCallback((taskId, subtaskId) => {
+    update((d) => ({
+      ...d,
+      tasks: d.tasks.map((t) =>
+        t.id === taskId
+          ? { ...t, subtasks: t.subtasks.filter((s) => s.id !== subtaskId) }
+          : t
+      ),
+    }))
+  }, [update])
+
+  const addList = useCallback((name, groupId) => {
+    const list = { id: uuidv4(), name, icon: 'list', color: '#788CDE' }
+    update((d) => ({
+      ...d,
+      lists: [...d.lists, list],
+      groups: d.groups.map((g) =>
+        g.id === groupId
+          ? { ...g, listIds: [...g.listIds, list.id] }
+          : g
+      ),
+    }))
+    return list
+  }, [update])
+
+  const addGroup = useCallback((name) => {
+    const group = { id: uuidv4(), name, listIds: [], personId: null }
+    update((d) => ({ ...d, groups: [...d.groups, group] }))
+    return group
+  }, [update])
+
+  const deleteList = useCallback((listId) => {
+    update((d) => ({
+      ...d,
+      lists: d.lists.filter((l) => l.id !== listId),
+      groups: d.groups.map((g) => ({
+        ...g,
+        listIds: g.listIds.filter((id) => id !== listId),
+      })),
+      tasks: d.tasks.filter((t) => t.listId !== listId),
+    }))
+  }, [update])
+
+  const renameList = useCallback((listId, name) => {
+    update((d) => ({
+      ...d,
+      lists: d.lists.map((l) => (l.id === listId ? { ...l, name } : l)),
+    }))
+  }, [update])
+
+  const renameGroup = useCallback((groupId, name) => {
+    update((d) => ({
+      ...d,
+      groups: d.groups.map((g) => (g.id === groupId ? { ...g, name } : g)),
+    }))
+  }, [update])
+
+  const updateGroup = useCallback((groupId, changes) => {
+    update((d) => ({
+      ...d,
+      groups: d.groups.map((g) => (g.id === groupId ? { ...g, ...changes } : g)),
+    }))
+  }, [update])
+
+  const moveGroup = useCallback((groupId, direction) => {
+    update((d) => {
+      const groups = [...d.groups]
+      const idx = groups.findIndex((g) => g.id === groupId)
+      if (idx === -1) return d
+      const newIdx = idx + direction
+      if (newIdx < 0 || newIdx >= groups.length) return d
+      ;[groups[idx], groups[newIdx]] = [groups[newIdx], groups[idx]]
+      return { ...d, groups }
+    })
+  }, [update])
+
+  // People
+  const addPerson = useCallback((name) => {
+    const person = { id: uuidv4(), name, color: getPersonColor() }
+    update((d) => ({ ...d, people: [...d.people, person] }))
+    return person
+  }, [update])
+
+  const deletePerson = useCallback((personId) => {
+    update((d) => ({
+      ...d,
+      people: d.people.filter((p) => p.id !== personId),
+      groups: d.groups.map((g) =>
+        g.personId === personId ? { ...g, personId: null } : g
+      ),
+      tasks: d.tasks.map((t) =>
+        t.assigneeId === personId ? { ...t, assigneeId: null } : t
+      ),
+    }))
+  }, [update])
+
+  const renamePerson = useCallback((personId, name) => {
+    update((d) => ({
+      ...d,
+      people: d.people.map((p) => (p.id === personId ? { ...p, name } : p)),
+    }))
+  }, [update])
+
+  // Tags
+  const addTag = useCallback((name, color) => {
+    const tag = { id: uuidv4(), name, color: color || getTagColor() }
+    update((d) => ({ ...d, tags: [...d.tags, tag] }))
+    return tag
+  }, [update])
+
+  const deleteTag = useCallback((tagId) => {
+    update((d) => ({
+      ...d,
+      tags: d.tags.filter((t) => t.id !== tagId),
+      tasks: d.tasks.map((t) => ({
+        ...t,
+        tagIds: (t.tagIds || []).filter((id) => id !== tagId),
+      })),
+    }))
+  }, [update])
+
+  const renameTag = useCallback((tagId, name) => {
+    update((d) => ({
+      ...d,
+      tags: d.tags.map((t) => (t.id === tagId ? { ...t, name } : t)),
+    }))
+  }, [update])
+
+  return {
+    data,
+    addTask,
+    toggleTask,
+    toggleImportant,
+    deleteTask,
+    updateTask,
+    addSubtask,
+    toggleSubtask,
+    deleteSubtask,
+    addList,
+    addGroup,
+    deleteList,
+    renameList,
+    renameGroup,
+    updateGroup,
+    moveGroup,
+    addPerson,
+    deletePerson,
+    renamePerson,
+    addTag,
+    deleteTag,
+    renameTag,
+  }
+}
+
+const personColors = [
+  '#0078d4', '#e74856', '#00cc6a', '#f7630c',
+  '#8764b8', '#00b7c3', '#ff8c00', '#e81123',
+  '#0099bc', '#7a7574', '#567c73', '#c30052',
+]
+let colorIndex = 0
+function getPersonColor() {
+  const c = personColors[colorIndex % personColors.length]
+  colorIndex++
+  return c
+}
+
+const tagColors = [
+  '#0078d4', '#e74856', '#00cc6a', '#f7630c',
+  '#8764b8', '#ffb900', '#00b7c3', '#c30052',
+]
+let tagColorIndex = 0
+function getTagColor() {
+  const c = tagColors[tagColorIndex % tagColors.length]
+  tagColorIndex++
+  return c
+}
