@@ -31,6 +31,7 @@ export default function TaskListView({
   onAddTask,
   onToggleTask,
   onToggleImportant,
+  onToggleSubtask,
   onSelectTask,
   selectedTaskId,
   showListName,
@@ -40,6 +41,7 @@ export default function TaskListView({
   tags,
   listId,
   onUpdateTask,
+  onMoveTask,
   filters,
   onSetFilters,
   addTaskInputRef,
@@ -289,7 +291,7 @@ export default function TaskListView({
             </div>
           )}
 
-          {lists.length > 1 && (
+          {!listId && lists.length > 1 && (
             <div className="filter-group">
               <div className="filter-label">List</div>
               <div className="filter-options">
@@ -306,7 +308,7 @@ export default function TaskListView({
             </div>
           )}
 
-          {groups && groups.length > 0 && (
+          {!listId && groups && groups.length > 0 && (
             <div className="filter-group">
               <div className="filter-label">Group</div>
               <div className="filter-options">
@@ -428,17 +430,20 @@ export default function TaskListView({
           </div>
         )}
 
-        {activeTasks.map((task) => (
+        {activeTasks.map((task, index) => (
           <TaskItem
             key={task.id}
             task={task}
             onToggle={onToggleTask}
             onToggleImportant={onToggleImportant}
+            onToggleSubtask={onToggleSubtask}
             onClick={() => onSelectTask(task.id)}
             selected={selectedTaskId === task.id}
             showListName={showListName}
             listName={getListName(task)}
             tags={tags}
+            onMoveUp={listId && index > 0 ? () => onMoveTask(task.id, -1) : null}
+            onMoveDown={listId && index < activeTasks.length - 1 ? () => onMoveTask(task.id, 1) : null}
           />
         ))}
 
@@ -452,7 +457,7 @@ export default function TaskListView({
               Completed ({completedTasks.length})
             </div>
             {showCompleted &&
-              completedTasks.map((task) => (
+              completedTasks.map((task, index) => (
                 <TaskItem
                   key={task.id}
                   task={task}
@@ -463,6 +468,8 @@ export default function TaskListView({
                   showListName={showListName}
                   listName={getListName(task)}
                   tags={tags}
+                  onMoveUp={listId && index > 0 ? () => onMoveTask(task.id, -1) : null}
+                  onMoveDown={listId && index < completedTasks.length - 1 ? () => onMoveTask(task.id, 1) : null}
                 />
               ))}
           </>

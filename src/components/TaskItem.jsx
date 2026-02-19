@@ -1,5 +1,7 @@
-import { Check, Star, CalendarDays, ListChecks } from 'lucide-react'
+import { useState } from 'react'
+import { Check, Star, CalendarDays, ListChecks, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react'
 import { format, isPast, isToday } from 'date-fns'
+import { parseDate } from '../utils/date'
 
 const priorityColors = {
   low: '#107c10',
@@ -11,16 +13,21 @@ export default function TaskItem({
   task,
   onToggle,
   onToggleImportant,
+  onToggleSubtask,
   onClick,
   selected,
   showListName,
   listName,
   tags,
+  onMoveUp,
+  onMoveDown,
 }) {
+  const [subtasksExpanded, setSubtasksExpanded] = useState(false)
+
   const completedSubtasks = task.subtasks.filter((s) => s.completed).length
   const totalSubtasks = task.subtasks.length
   const hasDueDate = !!task.dueDate
-  const dueDate = hasDueDate ? new Date(task.dueDate) : null
+  const dueDate = hasDueDate ? parseDate(task.dueDate) : null
   const isOverdue = dueDate && isPast(dueDate) && !isToday(dueDate) && !task.completed
   const hasPriority = task.priority && task.priority !== 'none'
   const taskTags = (task.tagIds || [])
@@ -67,10 +74,17 @@ export default function TaskItem({
             </span>
           )}
           {totalSubtasks > 0 && (
-            <span className="subtask-count">
+            <button
+              className="subtask-count-btn"
+              onClick={(e) => {
+                e.stopPropagation()
+                setSubtasksExpanded((v) => !v)
+              }}
+            >
               <ListChecks size={11} />
               {completedSubtasks}/{totalSubtasks}
-            </span>
+              <ChevronDown size={10} className={`subtask-chevron ${subtasksExpanded ? 'expanded' : ''}`} />
+            </button>
           )}
           {taskTags.map((tag) => (
             <span
@@ -82,7 +96,45 @@ export default function TaskItem({
             </span>
           ))}
         </div>
+
+        {subtasksExpanded && totalSubtasks > 0 && (
+          <div className="task-subtask-list" onClick={(e) => e.stopPropagation()}>
+            {task.subtasks.map((sub) => (
+              <div
+                key={sub.id}
+                className={`task-subtask-item ${sub.completed ? 'completed' : ''}`}
+                onClick={() => onToggleSubtask?.(task.id, sub.id)}
+              >
+                <div className={`subtask-checkbox ${sub.completed ? 'checked' : ''}`}>
+                  {sub.completed && <Check size={10} strokeWidth={3} />}
+                </div>
+                <span>{sub.title}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {(onMoveUp || onMoveDown) && (
+        <span className="task-reorder-btns">
+          <button
+            className="group-reorder-btn"
+            disabled={!onMoveUp}
+            onClick={(e) => { e.stopPropagation(); onMoveUp?.() }}
+            title="Move up"
+          >
+            <ArrowUp size={12} />
+          </button>
+          <button
+            className="group-reorder-btn"
+            disabled={!onMoveDown}
+            onClick={(e) => { e.stopPropagation(); onMoveDown?.() }}
+            title="Move down"
+          >
+            <ArrowDown size={12} />
+          </button>
+        </span>
+      )}
 
       <button
         className={`task-important-btn ${task.important ? 'active' : ''}`}

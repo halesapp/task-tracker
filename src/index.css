@@ -617,6 +617,89 @@ input, textarea {
   gap: 3px;
 }
 
+.task-reorder-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  opacity: 0;
+  transition: opacity 0.1s;
+  flex-shrink: 0;
+}
+
+.task-item:hover .task-reorder-btns {
+  opacity: 1;
+}
+
+.subtask-count-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  padding: 1px 4px;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  border-radius: 3px;
+}
+
+.subtask-count-btn:hover {
+  background: var(--bg-active);
+  color: var(--text-secondary);
+}
+
+.subtask-chevron {
+  transition: transform 0.15s;
+}
+
+.subtask-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.task-subtask-list {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.task-subtask-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 6px;
+}
+
+.task-subtask-item:hover {
+  background: var(--bg-active);
+}
+
+.task-subtask-item.completed span {
+  text-decoration: line-through;
+  color: var(--text-tertiary);
+}
+
+.subtask-checkbox {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: white;
+}
+
+.task-subtask-item.completed .subtask-checkbox {
+  background: var(--completed);
+  border-color: var(--completed);
+}
+
 .task-important-btn {
   color: var(--text-tertiary);
   padding: 4px;
@@ -1019,6 +1102,53 @@ input, textarea {
 .sidebar-item.people .icon { color: #0078d4; }
 .sidebar-item.gantt .icon { color: #e74856; }
 .sidebar-item.priority .icon { color: #f7630c; }
+.sidebar-item.tags .icon { color: #8764b8; }
+
+/* Tag management */
+.tag-color-input {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.tag-manage-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+}
+
+.tag-manage-name {
+  flex: 1;
+  font-size: 14px;
+  cursor: default;
+  color: var(--text-primary);
+}
+
+.tag-name-edit {
+  flex: 1;
+  font-size: 14px;
+  background: var(--bg-primary);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.tag-manage-count {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
 
 /* Group reorder buttons */
 .group-reorder-btns {
@@ -1051,6 +1181,59 @@ input, textarea {
 .group-reorder-btn:disabled {
   opacity: 0.3;
   cursor: default;
+}
+
+.group-delete-btn:hover:not(:disabled) {
+  color: #d13438 !important;
+}
+
+/* List item delete button */
+.sidebar-item-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sidebar-item-actions .count {
+  margin-left: 0;
+}
+
+.list-reorder-btns {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.sidebar-item:hover .list-reorder-btns {
+  opacity: 1;
+}
+
+.sidebar-item-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-radius: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.sidebar-item:hover .sidebar-item-delete {
+  opacity: 1;
+}
+
+.sidebar-item-delete:hover {
+  background: var(--bg-active);
+  color: #d13438;
 }
 
 /* Group person tag */
@@ -1181,6 +1364,39 @@ input, textarea {
   gap: 8px;
   padding: 3px 0;
   font-size: 13px;
+}
+
+/* Assignee chips */
+.assignee-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1;
+}
+
+.assignee-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.assignee-chip button {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.assignee-chip button:hover {
+  opacity: 1;
 }
 
 /* Assignee picker */

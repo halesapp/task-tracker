@@ -19,6 +19,7 @@ import {
   Cloud,
   Flag,
   Trash2,
+  Tag,
 } from 'lucide-react'
 
 const smartLists = [
@@ -29,6 +30,7 @@ const smartLists = [
   { id: '_calendar', name: 'Calendar', icon: CalendarRange, className: 'calendar' },
   { id: '_people', name: 'People', icon: Users, className: 'people' },
   { id: '_gantt', name: 'Gantt Chart', icon: GanttChart, className: 'gantt' },
+  { id: '_tags', name: 'Tags', icon: Tag, className: 'tags' },
 ]
 
 function getListIcon() {
@@ -44,6 +46,9 @@ export default function Sidebar({
   onRenameList,
   onRenameGroup,
   onMoveGroup,
+  onMoveList,
+  onDeleteList,
+  onDeleteGroup,
   taskCounts,
   onOpenSearch,
   onOpenSync,
@@ -225,14 +230,23 @@ export default function Sidebar({
                   >
                     <ArrowDown size={12} />
                   </button>
+                  <button
+                    className="group-reorder-btn group-delete-btn"
+                    onClick={(e) => { e.stopPropagation(); onDeleteGroup(group.id) }}
+                    title="Delete group"
+                  >
+                    <Trash2 size={12} />
+                  </button>
                 </span>
               )}
             </div>
             {!collapsed && (
               <div className="sidebar-group-lists">
-                {groupLists.map((list) => {
+                {groupLists.map((list, listIndex) => {
                   const Icon = getListIcon()
                   const count = taskCounts[list.id] || 0
+                  const isFirstList = listIndex === 0
+                  const isLastList = listIndex === groupLists.length - 1
                   return (
                     <div
                       key={list.id}
@@ -269,7 +283,36 @@ export default function Sidebar({
                       ) : (
                         <span>{list.name}</span>
                       )}
-                      {editingListId !== list.id && count > 0 && <span className="count">{count}</span>}
+                      {editingListId !== list.id && (
+                        <span className="sidebar-item-actions">
+                          {count > 0 && <span className="count">{count}</span>}
+                          <span className="list-reorder-btns">
+                            <button
+                              className="group-reorder-btn"
+                              disabled={isFirstList}
+                              onClick={(e) => { e.stopPropagation(); onMoveList(group.id, list.id, -1) }}
+                              title="Move up"
+                            >
+                              <ArrowUp size={12} />
+                            </button>
+                            <button
+                              className="group-reorder-btn"
+                              disabled={isLastList}
+                              onClick={(e) => { e.stopPropagation(); onMoveList(group.id, list.id, 1) }}
+                              title="Move down"
+                            >
+                              <ArrowDown size={12} />
+                            </button>
+                          </span>
+                          <button
+                            className="sidebar-item-delete"
+                            onClick={(e) => { e.stopPropagation(); onDeleteList(list.id) }}
+                            title="Delete list"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </span>
+                      )}
                     </div>
                   )
                 })}

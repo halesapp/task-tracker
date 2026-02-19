@@ -30,7 +30,7 @@ export default function PeopleView({
   }
 
   function getPersonTasks(personId) {
-    return tasks.filter((t) => t.assigneeId === personId)
+    return tasks.filter((t) => (t.assigneeIds || []).includes(personId))
   }
 
   function getGroupLists(group) {

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { parseDate } from '../utils/date'
 import {
   X,
   Check,
@@ -81,9 +82,9 @@ export default function TaskDetail({
     }
   }
 
-  const assignee = task.assigneeId
-    ? people.find((p) => p.id === task.assigneeId)
-    : null
+  const assignees = (task.assigneeIds || [])
+    .map((id) => people.find((p) => p.id === id))
+    .filter(Boolean)
 
   const currentPriority = PRIORITIES.find((p) => p.value === (task.priority || 'none'))
   const taskTags = (task.tagIds || [])
@@ -252,23 +253,30 @@ export default function TaskDetail({
           </div>
         )}
 
-        {/* Assignee */}
+        {/* Assignees */}
         <div
-          className={`detail-field ${assignee ? 'has-value' : ''}`}
+          className={`detail-field ${assignees.length > 0 ? 'has-value' : ''}`}
           onClick={() => setShowAssigneePicker(!showAssigneePicker)}
         >
           <span className="field-icon"><User size={18} /></span>
-          <span>{assignee ? assignee.name : 'Assign to someone'}</span>
-          {assignee && (
-            <button
-              style={{ marginLeft: 'auto' }}
-              onClick={(e) => {
-                e.stopPropagation()
-                onUpdate(task.id, { assigneeId: null })
-              }}
-            >
-              <X size={14} />
-            </button>
+          {assignees.length > 0 ? (
+            <span className="assignee-chips">
+              {assignees.map((person) => (
+                <span key={person.id} className="assignee-chip" style={{ background: person.color + '22', color: person.color }}>
+                  {person.name}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onUpdate(task.id, { assigneeIds: (task.assigneeIds || []).filter((id) => id !== person.id) })
+                    }}
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              ))}
+            </span>
+          ) : (
+            <span>Assign to someone</span>
           )}
         </div>
         {showAssigneePicker && (
@@ -278,24 +286,30 @@ export default function TaskDetail({
                 No people added yet. Add people from the People view.
               </div>
             )}
-            {people.map((person) => (
-              <div
-                key={person.id}
-                className="assignee-option"
-                onClick={() => {
-                  onUpdate(task.id, { assigneeId: person.id })
-                  setShowAssigneePicker(false)
-                }}
-              >
-                <div className="person-avatar-sm" style={{ background: person.color }}>
-                  {person.name.charAt(0).toUpperCase()}
+            {people.map((person) => {
+              const isAssigned = (task.assigneeIds || []).includes(person.id)
+              return (
+                <div
+                  key={person.id}
+                  className="assignee-option"
+                  onClick={() => {
+                    const current = task.assigneeIds || []
+                    const next = isAssigned
+                      ? current.filter((id) => id !== person.id)
+                      : [...current, person.id]
+                    onUpdate(task.id, { assigneeIds: next })
+                  }}
+                >
+                  <div className="person-avatar-sm" style={{ background: person.color }}>
+                    {person.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span>{person.name}</span>
+                  {isAssigned && (
+                    <Check size={14} style={{ marginLeft: 'auto', color: 'var(--accent)' }} />
+                  )}
                 </div>
-                <span>{person.name}</span>
-                {task.assigneeId === person.id && (
-                  <Check size={14} style={{ marginLeft: 'auto', color: 'var(--accent)' }} />
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
@@ -305,7 +319,7 @@ export default function TaskDetail({
           onClick={() => setShowDatePicker(!showDatePicker)}
         >
           <span className="field-icon"><CalendarDays size={18} /></span>
-          <span>{task.dueDate ? 'Due: ' + new Date(task.dueDate).toLocaleDateString() : 'Add due date'}</span>
+          <span>{task.dueDate ? 'Due: ' + parseDate(task.dueDate).toLocaleDateString() : 'Add due date'}</span>
           {task.dueDate && (
             <button
               style={{ marginLeft: 'auto' }}
@@ -324,7 +338,7 @@ export default function TaskDetail({
               type="date"
               value={task.dueDate ? task.dueDate.split('T')[0] : ''}
               onChange={(e) => {
-                onUpdate(task.id, { dueDate: e.target.value ? new Date(e.target.value).toISOString() : null })
+                onUpdate(task.id, { dueDate: e.target.value || null })
                 setShowDatePicker(false)
               }}
             />
@@ -337,7 +351,7 @@ export default function TaskDetail({
           onClick={() => setShowStartPicker(!showStartPicker)}
         >
           <span className="field-icon"><Play size={18} /></span>
-          <span>{task.startDate ? 'Start: ' + new Date(task.startDate).toLocaleDateString() : 'Add start date'}</span>
+          <span>{task.startDate ? 'Start: ' + parseDate(task.startDate).toLocaleDateString() : 'Add start date'}</span>
           {task.startDate && (
             <button
               style={{ marginLeft: 'auto' }}
@@ -356,7 +370,7 @@ export default function TaskDetail({
               type="date"
               value={task.startDate ? task.startDate.split('T')[0] : ''}
               onChange={(e) => {
-                onUpdate(task.id, { startDate: e.target.value ? new Date(e.target.value).toISOString() : null })
+                onUpdate(task.id, { startDate: e.target.value || null })
                 setShowStartPicker(false)
               }}
             />
@@ -369,7 +383,7 @@ export default function TaskDetail({
           onClick={() => setShowEndPicker(!showEndPicker)}
         >
           <span className="field-icon"><Flag size={18} /></span>
-          <span>{task.endDate ? 'End: ' + new Date(task.endDate).toLocaleDateString() : 'Add end date'}</span>
+          <span>{task.endDate ? 'End: ' + parseDate(task.endDate).toLocaleDateString() : 'Add end date'}</span>
           {task.endDate && (
             <button
               style={{ marginLeft: 'auto' }}
@@ -388,7 +402,7 @@ export default function TaskDetail({
               type="date"
               value={task.endDate ? task.endDate.split('T')[0] : ''}
               onChange={(e) => {
-                onUpdate(task.id, { endDate: e.target.value ? new Date(e.target.value).toISOString() : null })
+                onUpdate(task.id, { endDate: e.target.value || null })
                 setShowEndPicker(false)
               }}
             />

@@ -5,7 +5,7 @@ const STORAGE_KEY = 'todo-app-data'
 
 const defaultData = {
   groups: [
-    { id: 'default-group', name: 'My Lists', listIds: ['list-tasks'], personId: null },
+    { id: 'default-group', name: 'Uncategorized lists', listIds: ['list-tasks'], personId: null },
   ],
   lists: [
     { id: 'list-tasks', name: 'Tasks', icon: 'home', color: '#788CDE' },
@@ -26,14 +26,21 @@ function loadData() {
         personId: null,
         ...g,
       }))
-      parsed.tasks = parsed.tasks.map((t) => ({
-        startDate: null,
-        endDate: null,
-        assigneeId: null,
-        priority: 'none',
-        tagIds: [],
-        ...t,
-      }))
+      parsed.tasks = parsed.tasks.map((t) => {
+        const { assigneeId, ...rest } = {
+          startDate: null,
+          endDate: null,
+          assigneeIds: [],
+          priority: 'none',
+          tagIds: [],
+          ...t,
+        }
+        // Migrate old single assigneeId to assigneeIds array
+        if (!rest.assigneeIds?.length && assigneeId) {
+          rest.assigneeIds = [assigneeId]
+        }
+        return rest
+      })
       return parsed
     }
   } catch {}
@@ -66,7 +73,7 @@ export function useStore() {
       dueDate: null,
       startDate: null,
       endDate: null,
-      assigneeId: null,
+      assigneeIds: [],
       priority: 'none',
       tagIds: [],
       note: '',
@@ -202,6 +209,53 @@ export function useStore() {
     }))
   }, [update])
 
+  const deleteGroup = useCallback((groupId) => {
+    update((d) => {
+      const group = d.groups.find((g) => g.id === groupId)
+      if (!group) return d
+      const listIdsToDelete = new Set(group.listIds)
+      return {
+        ...d,
+        groups: d.groups.filter((g) => g.id !== groupId),
+        lists: d.lists.filter((l) => !listIdsToDelete.has(l.id)),
+        tasks: d.tasks.filter((t) => !listIdsToDelete.has(t.listId)),
+      }
+    })
+  }, [update])
+
+  const moveList = useCallback((groupId, listId, direction) => {
+    update((d) => ({
+      ...d,
+      groups: d.groups.map((g) => {
+        if (g.id !== groupId) return g
+        const listIds = [...g.listIds]
+        const idx = listIds.indexOf(listId)
+        if (idx === -1) return g
+        const newIdx = idx + direction
+        if (newIdx < 0 || newIdx >= listIds.length) return g
+        ;[listIds[idx], listIds[newIdx]] = [listIds[newIdx], listIds[idx]]
+        return { ...g, listIds }
+      }),
+    }))
+  }, [update])
+
+  const moveTask = useCallback((taskId, direction) => {
+    update((d) => {
+      const task = d.tasks.find((t) => t.id === taskId)
+      if (!task) return d
+      const peers = d.tasks.filter((t) => t.listId === task.listId && t.completed === task.completed)
+      const idx = peers.findIndex((t) => t.id === taskId)
+      const newIdx = idx + direction
+      if (newIdx < 0 || newIdx >= peers.length) return d
+      const swapId = peers[newIdx].id
+      const tasks = [...d.tasks]
+      const i = tasks.findIndex((t) => t.id === taskId)
+      const j = tasks.findIndex((t) => t.id === swapId)
+      ;[tasks[i], tasks[j]] = [tasks[j], tasks[i]]
+      return { ...d, tasks }
+    })
+  }, [update])
+
   const moveGroup = useCallback((groupId, direction) => {
     update((d) => {
       const groups = [...d.groups]
@@ -228,9 +282,10 @@ export function useStore() {
       groups: d.groups.map((g) =>
         g.personId === personId ? { ...g, personId: null } : g
       ),
-      tasks: d.tasks.map((t) =>
-        t.assigneeId === personId ? { ...t, assigneeId: null } : t
-      ),
+      tasks: d.tasks.map((t) => ({
+        ...t,
+        assigneeIds: (t.assigneeIds || []).filter((id) => id !== personId),
+      })),
     }))
   }, [update])
 
@@ -266,6 +321,13 @@ export function useStore() {
     }))
   }, [update])
 
+  const updateTag = useCallback((tagId, changes) => {
+    update((d) => ({
+      ...d,
+      tags: d.tags.map((t) => (t.id === tagId ? { ...t, ...changes } : t)),
+    }))
+  }, [update])
+
   return {
     data,
     addTask,
@@ -279,6 +341,9 @@ export function useStore() {
     addList,
     addGroup,
     deleteList,
+    deleteGroup,
+    moveList,
+    moveTask,
     renameList,
     renameGroup,
     updateGroup,
@@ -289,6 +354,7 @@ export function useStore() {
     addTag,
     deleteTag,
     renameTag,
+    updateTag,
   }
 }
 

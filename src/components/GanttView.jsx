@@ -13,6 +13,7 @@ import {
   isToday,
 } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { parseDate } from '../utils/date'
 
 const DAY_WIDTH = 40
 const ROW_HEIGHT = 36
@@ -29,8 +30,8 @@ export default function GanttView({ tasks, lists, people, onSelectTask }) {
   const totalWidth = days.length * DAY_WIDTH
 
   function getBarStyle(task) {
-    const start = new Date(task.startDate)
-    const end = new Date(task.endDate)
+    const start = parseDate(task.startDate)
+    const end = parseDate(task.endDate)
     const dayOffset = differenceInDays(start, timelineStart)
     const duration = differenceInDays(end, start) + 1
     return {
@@ -45,14 +46,15 @@ export default function GanttView({ tasks, lists, people, onSelectTask }) {
   }
 
   function getAssigneeName(task) {
-    if (!task.assigneeId) return null
-    const person = people.find((p) => p.id === task.assigneeId)
-    return person?.name || null
+    const ids = task.assigneeIds || []
+    if (!ids.length) return null
+    return ids.map((id) => people.find((p) => p.id === id)?.name).filter(Boolean).join(', ')
   }
 
   function getAssigneeColor(task) {
-    if (!task.assigneeId) return 'var(--accent)'
-    const person = people.find((p) => p.id === task.assigneeId)
+    const ids = task.assigneeIds || []
+    if (!ids.length) return 'var(--accent)'
+    const person = people.find((p) => p.id === ids[0])
     return person?.color || 'var(--accent)'
   }
 

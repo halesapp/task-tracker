@@ -13,6 +13,7 @@ import {
 } from 'date-fns'
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { parseDate } from '../utils/date'
 
 const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -34,7 +35,7 @@ export default function CalendarView({ tasks, onSelectDate }) {
   function getTasksForDay(d) {
     return tasks.filter((t) => {
       if (!t.dueDate) return false
-      return isSameDay(new Date(t.dueDate), d)
+      return isSameDay(parseDate(t.dueDate), d)
     })
   }
 

@@ -9,6 +9,7 @@ import PriorityView from './components/PriorityView'
 import DeleteAllModal from './components/DeleteAllModal'
 import SearchOverlay from './components/SearchOverlay'
 import SyncPanel from './components/SyncPanel'
+import TagsView from './components/TagsView'
 import { useStore } from './hooks/useStore'
 import { useSync } from './hooks/useSync'
 import { Download, Upload } from 'lucide-react'
@@ -17,7 +18,7 @@ function loadDarkMode() {
   try {
     const stored = localStorage.getItem('todo-dark-mode')
     if (stored !== null) return stored === 'true'
-    return true // dark mode by default
+    return false // light mode by default
   } catch {
     return true
   }
@@ -123,9 +124,9 @@ export default function App() {
 
     // Apply filters
     if (filters.assigned === 'assigned') {
-      tasks = tasks.filter((t) => t.assigneeId)
+      tasks = tasks.filter((t) => t.assigneeIds?.length > 0)
     } else if (filters.assigned === 'unassigned') {
-      tasks = tasks.filter((t) => !t.assigneeId)
+      tasks = tasks.filter((t) => !t.assigneeIds?.length)
     }
 
     if (filters.dated === 'dated') {
@@ -153,7 +154,7 @@ export default function App() {
     }
 
     if (filters.personId) {
-      tasks = tasks.filter((t) => t.assigneeId === filters.personId)
+      tasks = tasks.filter((t) => (t.assigneeIds || []).includes(filters.personId))
     }
 
     if (filters.completion === 'completed') {
@@ -182,6 +183,7 @@ export default function App() {
       case '_calendar': return 'Calendar'
       case '_people': return 'People'
       case '_gantt': return 'Gantt Chart'
+      case '_tags': return 'Tags'
       default: {
         const list = data.lists.find((l) => l.id === activeView)
         return list?.name || 'Tasks'
@@ -209,6 +211,7 @@ export default function App() {
       case '_calendar': return '#8764b8'
       case '_people': return '#0078d4'
       case '_gantt': return '#e74856'
+      case '_tags': return '#8764b8'
       default: {
         const list = data.lists.find((l) => l.id === activeView)
         return list?.color || '#2564cf'
@@ -225,10 +228,10 @@ export default function App() {
     const task = store.addTask(targetListId, title)
     const updates = {}
 
-    if (options.dueDate) updates.dueDate = new Date(options.dueDate).toISOString()
-    if (options.startDate) updates.startDate = new Date(options.startDate).toISOString()
-    if (options.endDate) updates.endDate = new Date(options.endDate).toISOString()
-    if (options.assigneeId) updates.assigneeId = options.assigneeId
+    if (options.dueDate) updates.dueDate = options.dueDate
+    if (options.startDate) updates.startDate = options.startDate
+    if (options.endDate) updates.endDate = options.endDate
+    if (options.assigneeId) updates.assigneeIds = [options.assigneeId]
     if (options.important) updates.important = true
     if (options.priority) updates.priority = options.priority
 
@@ -247,6 +250,25 @@ export default function App() {
   function handleDeleteTask(taskId) {
     store.deleteTask(taskId)
     setSelectedTaskId(null)
+  }
+
+  function handleDeleteList(listId) {
+    store.deleteList(listId)
+    if (activeView === listId) {
+      setActiveView('_all')
+      setSelectedTaskId(null)
+      setFilters({})
+    }
+  }
+
+  function handleDeleteGroup(groupId) {
+    const group = data.groups.find((g) => g.id === groupId)
+    store.deleteGroup(groupId)
+    if (group && group.listIds.includes(activeView)) {
+      setActiveView('_all')
+      setSelectedTaskId(null)
+      setFilters({})
+    }
   }
 
   function handleSearchSelect(taskId) {
@@ -322,6 +344,7 @@ export default function App() {
   const isPeople = activeView === '_people'
   const isGantt = activeView === '_gantt'
   const isPriority = activeView === '_priority'
+  const isTags = activeView === '_tags'
 
   return (
     <div className="app">
@@ -346,6 +369,9 @@ export default function App() {
         onRenameList={store.renameList}
         onRenameGroup={store.renameGroup}
         onMoveGroup={store.moveGroup}
+        onMoveList={store.moveList}
+        onDeleteList={handleDeleteList}
+        onDeleteGroup={handleDeleteGroup}
         taskCounts={taskCounts}
         onOpenSearch={() => setShowSearch(true)}
         onOpenSync={() => setShowSync(true)}
@@ -411,6 +437,20 @@ export default function App() {
               tags={data.tags || []}
             />
           </>
+        ) : isTags ? (
+          <>
+            <div className="main-header">
+              <h2 style={{ color: getAccentColor() }}>Tags</h2>
+            </div>
+            <TagsView
+              tags={data.tags || []}
+              tasks={data.tasks}
+              onAddTag={store.addTag}
+              onDeleteTag={store.deleteTag}
+              onRenameTag={store.renameTag}
+              onUpdateTag={store.updateTag}
+            />
+          </>
         ) : isGantt ? (
           <>
             <div className="main-header">
@@ -433,6 +473,7 @@ export default function App() {
             onAddTask={handleAddTask}
             onToggleTask={store.toggleTask}
             onToggleImportant={store.toggleImportant}
+            onToggleSubtask={store.toggleSubtask}
             onSelectTask={setSelectedTaskId}
             selectedTaskId={selectedTaskId}
             showListName={activeView.startsWith('_')}
@@ -442,6 +483,7 @@ export default function App() {
             tags={data.tags || []}
             listId={activeView.startsWith('_') ? null : activeView}
             onUpdateTask={store.updateTask}
+            onMoveTask={store.moveTask}
             filters={filters}
             onSetFilters={setFilters}
             addTaskInputRef={addTaskInputRef}
