@@ -300,7 +300,7 @@ export default function TaskDetail({
                     onUpdate(task.id, { assigneeIds: next })
                   }}
                 >
-                  <div className="person-avatar-sm" style={{ background: person.color }}>
+                  <div className="person-avatar-sm" style={{ background: person.color }} data-tooltip={person.name}>
                     {person.name.charAt(0).toUpperCase()}
                   </div>
                   <span>{person.name}</span>

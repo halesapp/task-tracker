@@ -176,6 +176,36 @@ export default function Sidebar({
 
       <div className="sidebar-divider" />
 
+      {addingGroup ? (
+        <div className="sidebar-add-input">
+          <input
+            autoFocus
+            value={newGroupName}
+            onChange={(e) => setNewGroupName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleAddGroup()
+              if (e.key === 'Escape') {
+                setAddingGroup(false)
+                setNewGroupName('')
+              }
+            }}
+            onBlur={() => {
+              if (newGroupName.trim()) handleAddGroup()
+              else {
+                setAddingGroup(false)
+                setNewGroupName('')
+              }
+            }}
+            placeholder="Group name"
+          />
+        </div>
+      ) : (
+        <button className="sidebar-add-btn" onClick={() => setAddingGroup(true)}>
+          <FolderPlus size={18} />
+          <span>New group</span>
+        </button>
+      )}
+
       {data.groups.map((group, groupIndex) => {
         const collapsed = collapsedGroups[group.id]
         const groupLists = group.listIds
@@ -432,37 +462,6 @@ export default function Sidebar({
         )
       })()}
 
-      <div className="sidebar-bottom">
-        {addingGroup ? (
-          <div className="sidebar-add-input">
-            <input
-              autoFocus
-              value={newGroupName}
-              onChange={(e) => setNewGroupName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAddGroup()
-                if (e.key === 'Escape') {
-                  setAddingGroup(false)
-                  setNewGroupName('')
-                }
-              }}
-              onBlur={() => {
-                if (newGroupName.trim()) handleAddGroup()
-                else {
-                  setAddingGroup(false)
-                  setNewGroupName('')
-                }
-              }}
-              placeholder="Group name"
-            />
-          </div>
-        ) : (
-          <button className="sidebar-add-btn" onClick={() => setAddingGroup(true)}>
-            <FolderPlus size={18} />
-            <span>New group</span>
-          </button>
-        )}
-      </div>
     </div>
   )
 }

@@ -2,9 +2,11 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 
 const UPSTASH_URL_KEY = 'todo-sync-upstash-url'
 const UPSTASH_TOKEN_KEY = 'todo-sync-upstash-token'
-const AUTO_SYNC_INTERVAL = 300_000
+const LOCAL_LAST_SYNCED_KEY = 'todo-sync-lastSyncedAt'
+const AUTO_SYNC_DELAY = 90_000
 
 const DATA_KEYS = ['groups', 'lists', 'tasks', 'people', 'tags', 'settings']
+const SYNC_TIMESTAMP_KEY = 'todo:syncedAt'
 
 function redisKey(section) {
   return `todo:${section}`
@@ -23,6 +25,11 @@ async function upstashPipeline(url, token, commands) {
   return res.json()
 }
 
+async function fetchRemoteSyncedAt(url, token) {
+  const results = await upstashPipeline(url, token, [['GET', SYNC_TIMESTAMP_KEY]])
+  return results[0]?.result || null
+}
+
 async function pushChanged(url, token, data, lastSnapshots) {
   const commands = []
   const updatedKeys = []
@@ -37,12 +44,18 @@ async function pushChanged(url, token, data, lastSnapshots) {
 
   if (commands.length === 0) return null
 
+  const now = new Date().toISOString()
+  commands.push(['SET', SYNC_TIMESTAMP_KEY, now])
+
   await upstashPipeline(url, token, commands)
-  return updatedKeys
+  return { updatedKeys, syncedAt: now }
 }
 
 async function pullAll(url, token) {
-  const commands = DATA_KEYS.map((key) => ['GET', redisKey(key)])
+  const commands = [
+    ...DATA_KEYS.map((key) => ['GET', redisKey(key)]),
+    ['GET', SYNC_TIMESTAMP_KEY],
+  ]
   const results = await upstashPipeline(url, token, commands)
 
   const data = {}
@@ -54,7 +67,8 @@ async function pullAll(url, token) {
       hasAny = true
     }
   }
-  return hasAny ? data : null
+  const remoteSyncedAt = results[DATA_KEYS.length]?.result || null
+  return hasAny ? { data, remoteSyncedAt } : null
 }
 
 async function testConnection(url, token) {
@@ -70,17 +84,17 @@ export function useSync(data) {
   const [upstashUrl, setUpstashUrl] = useState(() => localStorage.getItem(UPSTASH_URL_KEY) || '')
   const [upstashToken, setUpstashToken] = useState(() => localStorage.getItem(UPSTASH_TOKEN_KEY) || '')
   const [syncing, setSyncing] = useState(false)
-  const [lastSynced, setLastSynced] = useState(null)
+  const [lastSynced, setLastSynced] = useState(() => localStorage.getItem(LOCAL_LAST_SYNCED_KEY))
   const [syncError, setSyncError] = useState(null)
-  const [connectionOk, setConnectionOk] = useState(null) // null = unknown, true/false
-  const [syncStatus, setSyncStatus] = useState(null) // null | 'synced' | 'modified'
+  const [connectionOk, setConnectionOk] = useState(null)
+  const [syncStatus, setSyncStatus] = useState(null)
+  const [conflictInfo, setConflictInfo] = useState(null)
 
   // Per-key snapshots of last synced JSON strings
   const lastSnapshots = useRef({})
 
   const isConfigured = !!(upstashUrl && upstashToken)
 
-  // Snapshot current data state for comparison
   function snapshotData(d) {
     const snap = {}
     for (const key of DATA_KEYS) {
@@ -89,7 +103,6 @@ export function useSync(data) {
     return snap
   }
 
-  // Check if current data differs from last synced snapshots
   function hasChanges(d) {
     for (const key of DATA_KEYS) {
       if (JSON.stringify(d[key] || []) !== lastSnapshots.current[key]) {
@@ -97,6 +110,11 @@ export function useSync(data) {
       }
     }
     return false
+  }
+
+  function recordLastSynced(ts) {
+    localStorage.setItem(LOCAL_LAST_SYNCED_KEY, ts)
+    setLastSynced(ts)
   }
 
   const saveCredentials = useCallback(async (url, token) => {
@@ -122,23 +140,45 @@ export function useSync(data) {
   function clearCredentials() {
     localStorage.removeItem(UPSTASH_URL_KEY)
     localStorage.removeItem(UPSTASH_TOKEN_KEY)
+    localStorage.removeItem(LOCAL_LAST_SYNCED_KEY)
     setUpstashUrl('')
     setUpstashToken('')
     setLastSynced(null)
     setSyncError(null)
     setConnectionOk(null)
     setSyncStatus(null)
+    setConflictInfo(null)
     lastSnapshots.current = {}
   }
 
-  const push = useCallback(async (pushData) => {
+  // push: skips conflict check if skipConflictCheck is true (used when user resolves conflict)
+  const push = useCallback(async (pushData, { skipConflictCheck = false } = {}) => {
     if (!upstashUrl || !upstashToken) return
-    setSyncing(true)
     setSyncError(null)
+
+    // Conflict check: if DB was synced by someone else after our last sync
+    if (!skipConflictCheck) {
+      const localLastSynced = localStorage.getItem(LOCAL_LAST_SYNCED_KEY)
+      if (localLastSynced) {
+        try {
+          const remoteSyncedAt = await fetchRemoteSyncedAt(upstashUrl, upstashToken)
+          if (remoteSyncedAt && remoteSyncedAt > localLastSynced) {
+            setConflictInfo({ remoteSyncedAt, localLastSyncedAt: localLastSynced })
+            setConnectionOk(true)
+            return
+          }
+        } catch {
+          // If we can't check, proceed optimistically
+        }
+      }
+    }
+
+    setSyncing(true)
     try {
-      const updated = await pushChanged(upstashUrl, upstashToken, pushData, lastSnapshots.current)
+      const result = await pushChanged(upstashUrl, upstashToken, pushData, lastSnapshots.current)
       lastSnapshots.current = snapshotData(pushData)
-      setLastSynced(new Date().toISOString())
+      const now = result?.syncedAt || new Date().toISOString()
+      recordLastSynced(now)
       setSyncStatus('synced')
       setConnectionOk(true)
     } catch (err) {
@@ -157,14 +197,15 @@ export function useSync(data) {
       const result = await pullAll(upstashUrl, upstashToken)
       if (result === null) {
         setSyncError('No data found — push first to create it')
-        setConnectionOk(true) // connection works, just no data
+        setConnectionOk(true)
         return null
       }
-      lastSnapshots.current = snapshotData(result)
-      setLastSynced(new Date().toISOString())
+      lastSnapshots.current = snapshotData(result.data)
+      const syncedAt = result.remoteSyncedAt || new Date().toISOString()
+      recordLastSynced(syncedAt)
       setSyncStatus('synced')
       setConnectionOk(true)
-      return result
+      return result.data
     } catch (err) {
       setSyncError(err.message)
       setConnectionOk(false)
@@ -174,6 +215,10 @@ export function useSync(data) {
     }
   }, [upstashUrl, upstashToken])
 
+  const dismissConflict = useCallback(() => {
+    setConflictInfo(null)
+  }, [])
+
   const syncNow = useCallback(async (syncData) => {
     await push(syncData)
   }, [push])
@@ -181,7 +226,6 @@ export function useSync(data) {
   // Track modified state when data changes
   useEffect(() => {
     if (!isConfigured || !data) return
-    // Only mark modified if we've synced at least once
     if (Object.keys(lastSnapshots.current).length > 0 && hasChanges(data)) {
       setSyncStatus('modified')
     }
@@ -196,17 +240,16 @@ export function useSync(data) {
     })
   }, [isConfigured, upstashUrl, upstashToken])
 
-  // Auto-sync every 60s when data has changed
+  // Auto-sync 90s after the last edit
   useEffect(() => {
     if (!isConfigured || !data) return
+    if (!hasChanges(data)) return
 
-    const interval = setInterval(() => {
-      if (hasChanges(data)) {
-        push(data)
-      }
-    }, AUTO_SYNC_INTERVAL)
+    const timeout = setTimeout(() => {
+      push(data)
+    }, AUTO_SYNC_DELAY)
 
-    return () => clearInterval(interval)
+    return () => clearTimeout(timeout)
   }, [isConfigured, data, push])
 
   return {
@@ -216,10 +259,12 @@ export function useSync(data) {
     isConfigured,
     connectionOk,
     syncStatus,
+    conflictInfo,
     saveCredentials,
     clearCredentials,
     push,
     pull,
     syncNow,
+    dismissConflict,
   }
 }

@@ -14,10 +14,10 @@ const defaultSettings = {
 
 const defaultData = {
   groups: [
-    { id: 'default-group', name: 'Uncategorized lists', listIds: ['list-tasks'], personId: null },
+    { id: 'default-group', name: 'Uncategorized lists', listIds: ['list-misc'], personId: null },
   ],
   lists: [
-    { id: 'list-tasks', name: 'Tasks', icon: 'home', color: '#788CDE' },
+    { id: 'list-misc', name: 'Misc', icon: 'home', color: '#788CDE' },
   ],
   tasks: [],
   people: [],
@@ -321,6 +321,13 @@ export function useStore() {
     }))
   }, [update])
 
+  const updatePerson = useCallback((personId, updates) => {
+    update((d) => ({
+      ...d,
+      people: d.people.map((p) => (p.id === personId ? { ...p, ...updates } : p)),
+    }))
+  }, [update])
+
   // Tags
   const addTag = useCallback((name, color) => {
     const tag = { id: uuidv4(), name, color: color || getTagColor() }
@@ -381,6 +388,7 @@ export function useStore() {
     addPerson,
     deletePerson,
     renamePerson,
+    updatePerson,
     addTag,
     deleteTag,
     renameTag,

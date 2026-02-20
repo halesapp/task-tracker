@@ -293,23 +293,6 @@ export default function TaskListView({
             </div>
           )}
 
-          {!listId && lists.length > 1 && (
-            <div className="filter-group">
-              <div className="filter-label">List</div>
-              <div className="filter-options">
-                {lists.map((l) => (
-                  <button
-                    key={l.id}
-                    className={`filter-option ${filters?.listId === l.id ? 'active' : ''}`}
-                    onClick={() => setFilter('listId', filters?.listId === l.id ? null : l.id)}
-                  >
-                    {l.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {!listId && groups && groups.length > 0 && (
             <div className="filter-group">
               <div className="filter-label">Group</div>
@@ -321,6 +304,23 @@ export default function TaskListView({
                     onClick={() => setFilter('groupId', filters?.groupId === g.id ? null : g.id)}
                   >
                     {g.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!listId && lists.length > 1 && (
+            <div className="filter-group">
+              <div className="filter-label">List</div>
+              <div className="filter-options">
+                {lists.map((l) => (
+                  <button
+                    key={l.id}
+                    className={`filter-option ${filters?.listId === l.id ? 'active' : ''}`}
+                    onClick={() => setFilter('listId', filters?.listId === l.id ? null : l.id)}
+                  >
+                    {l.name}
                   </button>
                 ))}
               </div>

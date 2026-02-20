@@ -1,5 +1,11 @@
-import { useState } from 'react'
-import { Plus, Trash2, Users, ChevronDown, User } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Plus, Trash2, Users, ChevronDown } from 'lucide-react'
+
+const PERSON_COLORS = [
+  '#0078d4', '#e74856', '#00cc6a', '#f7630c',
+  '#8764b8', '#00b7c3', '#ff8c00', '#e81123',
+  '#0099bc', '#7a7574', '#567c73', '#c30052',
+]
 
 export default function PeopleView({
   people,
@@ -8,11 +14,34 @@ export default function PeopleView({
   tasks,
   onAddPerson,
   onDeletePerson,
-  onRenamePerson,
+  onUpdatePerson,
   onSelectView,
 }) {
   const [newName, setNewName] = useState('')
   const [expandedPeople, setExpandedPeople] = useState({})
+  const [editingNameId, setEditingNameId] = useState(null)
+  const [editingNameValue, setEditingNameValue] = useState('')
+  const [colorPickerOpenId, setColorPickerOpenId] = useState(null)
+  const nameInputRef = useRef(null)
+  const colorPickerRef = useRef(null)
+
+  useEffect(() => {
+    if (editingNameId && nameInputRef.current) {
+      nameInputRef.current.focus()
+      nameInputRef.current.select()
+    }
+  }, [editingNameId])
+
+  useEffect(() => {
+    if (!colorPickerOpenId) return
+    function handleClick(e) {
+      if (colorPickerRef.current && !colorPickerRef.current.contains(e.target)) {
+        setColorPickerOpenId(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [colorPickerOpenId])
 
   function handleAdd() {
     if (newName.trim()) {
@@ -23,6 +52,33 @@ export default function PeopleView({
 
   function toggleExpand(personId) {
     setExpandedPeople((prev) => ({ ...prev, [personId]: !prev[personId] }))
+  }
+
+  function startEditName(person, e) {
+    e.stopPropagation()
+    setEditingNameId(person.id)
+    setEditingNameValue(person.name)
+    setColorPickerOpenId(null)
+  }
+
+  function commitName(person) {
+    const trimmed = editingNameValue.trim()
+    if (trimmed && trimmed !== person.name) {
+      onUpdatePerson(person.id, { name: trimmed })
+    }
+    setEditingNameId(null)
+  }
+
+  function toggleColorPicker(personId, e) {
+    e.stopPropagation()
+    setColorPickerOpenId((prev) => (prev === personId ? null : personId))
+    setEditingNameId(null)
+  }
+
+  function selectColor(personId, color, e) {
+    e.stopPropagation()
+    onUpdatePerson(personId, { color })
+    setColorPickerOpenId(null)
   }
 
   function getPersonGroups(personId) {
@@ -61,15 +117,58 @@ export default function PeopleView({
         const personGroups = getPersonGroups(person.id)
         const personTasks = getPersonTasks(person.id)
         const expanded = expandedPeople[person.id] === true
+        const isEditingName = editingNameId === person.id
+        const isColorPickerOpen = colorPickerOpenId === person.id
 
         return (
           <div key={person.id} className="person-card">
             <div className="person-card-header" onClick={() => toggleExpand(person.id)}>
-              <div className="person-avatar" style={{ background: person.color }}>
-                {person.name.charAt(0).toUpperCase()}
+              <div className="person-avatar-wrapper">
+                <div
+                  className="person-avatar"
+                  style={{ background: person.color, cursor: 'pointer' }}
+                  data-tooltip={isColorPickerOpen ? undefined : person.name}
+                  onClick={(e) => toggleColorPicker(person.id, e)}
+                >
+                  {person.name.charAt(0).toUpperCase()}
+                </div>
+                {isColorPickerOpen && (
+                  <div className="color-picker-popover" ref={colorPickerRef} onClick={(e) => e.stopPropagation()}>
+                    {PERSON_COLORS.map((color) => (
+                      <button
+                        key={color}
+                        className={`color-swatch${person.color === color ? ' active' : ''}`}
+                        style={{ background: color }}
+                        onClick={(e) => selectColor(person.id, color, e)}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="person-info">
-                <div className="person-name">{person.name}</div>
+                {isEditingName ? (
+                  <input
+                    ref={nameInputRef}
+                    className="person-name-input"
+                    value={editingNameValue}
+                    onChange={(e) => setEditingNameValue(e.target.value)}
+                    onBlur={() => commitName(person)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commitName(person)
+                      if (e.key === 'Escape') setEditingNameId(null)
+                      e.stopPropagation()
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <div
+                    className="person-name person-name-editable"
+                    onClick={(e) => startEditName(person, e)}
+                    title="Click to rename"
+                  >
+                    {person.name}
+                  </div>
+                )}
                 <div className="person-stats">
                   {personGroups.length} group{personGroups.length !== 1 ? 's' : ''}
                   {' \u00b7 '}

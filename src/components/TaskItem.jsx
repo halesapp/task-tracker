@@ -120,7 +120,7 @@ export default function TaskItem({
                   key={person.id}
                   className="task-assignee-dot"
                   style={{ background: person.color }}
-                  title={person.name}
+                  data-tooltip={person.name}
                 >
                   {person.name.charAt(0).toUpperCase()}
                 </span>

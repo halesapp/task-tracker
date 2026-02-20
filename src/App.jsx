@@ -8,6 +8,7 @@ import GanttView from './components/GanttView'
 import PriorityView from './components/PriorityView'
 import DeleteAllModal from './components/DeleteAllModal'
 import ConfirmModal from './components/ConfirmModal'
+import ConflictModal from './components/ConflictModal'
 import SearchOverlay from './components/SearchOverlay'
 import SyncPanel from './components/SyncPanel'
 import SettingsPanel from './components/SettingsPanel'
@@ -325,6 +326,20 @@ export default function App() {
     }
   }
 
+  async function handleConflictKeepLocal() {
+    sync.dismissConflict()
+    await sync.push(data, { skipConflictCheck: true })
+  }
+
+  async function handleConflictUseRemote() {
+    sync.dismissConflict()
+    const pulled = await sync.pull()
+    if (pulled) {
+      localStorage.setItem('todo-app-data', JSON.stringify(pulled))
+      window.location.reload()
+    }
+  }
+
   function handleDeleteAll() {
     localStorage.removeItem('todo-app-data')
     window.location.reload()
@@ -458,7 +473,7 @@ export default function App() {
               tasks={data.tasks}
               onAddPerson={store.addPerson}
               onDeletePerson={store.deletePerson}
-              onRenamePerson={store.renamePerson}
+              onUpdatePerson={store.updatePerson}
               onSelectView={setActiveView}
             />
           </>
@@ -597,6 +612,15 @@ export default function App() {
             />
           </div>
         </div>
+      )}
+
+      {sync.conflictInfo && (
+        <ConflictModal
+          conflictInfo={sync.conflictInfo}
+          onKeepLocal={handleConflictKeepLocal}
+          onUseRemote={handleConflictUseRemote}
+          onDismiss={sync.dismissConflict}
+        />
       )}
 
       {showSettings && (
