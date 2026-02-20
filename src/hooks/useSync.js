@@ -4,7 +4,7 @@ const UPSTASH_URL_KEY = 'todo-sync-upstash-url'
 const UPSTASH_TOKEN_KEY = 'todo-sync-upstash-token'
 const AUTO_SYNC_INTERVAL = 300_000
 
-const DATA_KEYS = ['groups', 'lists', 'tasks', 'people', 'tags']
+const DATA_KEYS = ['groups', 'lists', 'tasks', 'people', 'tags', 'settings']
 
 function redisKey(section) {
   return `todo:${section}`

@@ -20,6 +20,8 @@ export default function TaskItem({
   showListName,
   listName,
   tags,
+  people,
+  settings,
   onMoveUp,
   onMoveDown,
   lists,
@@ -37,6 +39,13 @@ export default function TaskItem({
   const taskTags = (task.tagIds || [])
     .map((id) => tags?.find((t) => t.id === id))
     .filter(Boolean)
+  const taskPeople = (task.assigneeIds || [])
+    .map((id) => people?.find((p) => p.id === id))
+    .filter(Boolean)
+
+  const showDates = settings?.showDates !== false
+  const showTags = settings?.showTags !== false
+  const showPeople = settings?.showPeople !== false
 
   return (
     <div
@@ -76,7 +85,7 @@ export default function TaskItem({
               {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
             </span>
           )}
-          {hasDueDate && (
+          {showDates && hasDueDate && (
             <span className={`due-tag ${isOverdue ? 'overdue' : ''}`}>
               <CalendarDays size={11} />
               {isToday(dueDate) ? 'Today' : format(dueDate, 'MMM d')}
@@ -95,7 +104,7 @@ export default function TaskItem({
               <ChevronDown size={10} className={`subtask-chevron ${subtasksExpanded ? 'expanded' : ''}`} />
             </button>
           )}
-          {taskTags.map((tag) => (
+          {showTags && taskTags.map((tag) => (
             <span
               key={tag.id}
               className="task-tag-chip"
@@ -104,6 +113,20 @@ export default function TaskItem({
               {tag.name}
             </span>
           ))}
+          {showPeople && taskPeople.length > 0 && (
+            <span className="task-assignees">
+              {taskPeople.slice(0, 3).map((person) => (
+                <span
+                  key={person.id}
+                  className="task-assignee-dot"
+                  style={{ background: person.color }}
+                  title={person.name}
+                >
+                  {person.name.charAt(0).toUpperCase()}
+                </span>
+              ))}
+            </span>
+          )}
         </div>
 
         {subtasksExpanded && totalSubtasks > 0 && (

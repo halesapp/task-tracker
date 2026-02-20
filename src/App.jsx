@@ -10,6 +10,7 @@ import DeleteAllModal from './components/DeleteAllModal'
 import ConfirmModal from './components/ConfirmModal'
 import SearchOverlay from './components/SearchOverlay'
 import SyncPanel from './components/SyncPanel'
+import SettingsPanel from './components/SettingsPanel'
 import TagsView from './components/TagsView'
 import { useStore } from './hooks/useStore'
 import { useSync } from './hooks/useSync'
@@ -34,6 +35,7 @@ export default function App() {
   const [filters, setFilters] = useState({})
   const [showSearch, setShowSearch] = useState(false)
   const [showSync, setShowSync] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [showDeleteAll, setShowDeleteAll] = useState(false)
   const [confirmModal, setConfirmModal] = useState(null) // { message, onConfirm }
   const [darkMode, setDarkMode] = useState(loadDarkMode)
@@ -48,6 +50,15 @@ export default function App() {
     document.documentElement.classList.toggle('dark', darkMode)
     localStorage.setItem('todo-dark-mode', darkMode)
   }, [darkMode])
+
+  // Apply font size CSS variables from settings
+  useEffect(() => {
+    const s = data.settings || {}
+    const root = document.documentElement
+    root.style.setProperty('--task-list-size', `${s.taskListSize || 14}px`)
+    root.style.setProperty('--sidebar-size', `${s.sidebarSize || 14}px`)
+    root.style.setProperty('--detail-size', `${s.detailSize || 14}px`)
+  }, [data.settings])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -409,6 +420,7 @@ export default function App() {
         darkMode={darkMode}
         onToggleDarkMode={() => setDarkMode((d) => !d)}
         onDeleteAll={() => setShowDeleteAll(true)}
+        onOpenSettings={() => setShowSettings(true)}
       />
 
       <div className="main">
@@ -463,6 +475,8 @@ export default function App() {
               selectedTaskId={selectedTaskId}
               lists={data.lists}
               tags={data.tags || []}
+              people={data.people || []}
+              settings={data.settings}
             />
           </>
         ) : isTags ? (
@@ -517,6 +531,7 @@ export default function App() {
             onSetFilters={setFilters}
             addTaskInputRef={addTaskInputRef}
             defaultFiltersOpen={activeView !== '_important' && activeView !== '_planned'}
+            settings={data.settings}
           />
         )}
       </div>
@@ -579,6 +594,18 @@ export default function App() {
               onExport={handleExport}
               fileInputRef={fileInputRef}
               onClose={() => setShowSync(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {showSettings && (
+        <div className="search-overlay" onClick={() => setShowSettings(false)}>
+          <div onClick={(e) => e.stopPropagation()} style={{ paddingTop: 80 }}>
+            <SettingsPanel
+              settings={data.settings}
+              onUpdate={store.updateSettings}
+              onClose={() => setShowSettings(false)}
             />
           </div>
         </div>

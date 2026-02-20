@@ -34,6 +34,9 @@
   --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   --sidebar-width: 320px;
   --detail-width: 360px;
+  --task-list-size: 14px;
+  --sidebar-size: 14px;
+  --detail-size: 14px;
 }
 
 html, body, #root {
@@ -114,7 +117,7 @@ input, textarea {
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--sidebar-size);
   transition: background 0.1s;
   user-select: none;
 }
@@ -584,7 +587,7 @@ input, textarea {
 }
 
 .task-title {
-  font-size: 14px;
+  font-size: var(--task-list-size);
   line-height: 1.4;
 }
 
@@ -752,6 +755,7 @@ input, textarea {
 .detail-body {
   padding: 16px 20px;
   flex: 1;
+  font-size: var(--detail-size);
 }
 
 .detail-task-title {
@@ -2501,6 +2505,137 @@ html.dark .sync-description a {
 
 .sync-btn-danger:hover {
   color: var(--red);
+}
+
+/* Settings Panel */
+.settings-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.settings-toggle-row > span {
+  flex: 1;
+}
+
+.settings-toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--border);
+  transition: background 0.15s;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.settings-toggle.on {
+  background: var(--accent);
+}
+
+.settings-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.settings-toggle.on .settings-toggle-thumb {
+  transform: translateX(16px);
+}
+
+.settings-font-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.settings-font-label {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.settings-font-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-font-value {
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 32px;
+  text-align: center;
+}
+
+.settings-font-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s;
+}
+
+.settings-font-btn:hover:not(:disabled) {
+  background: var(--bg-active);
+}
+
+.settings-font-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.settings-font-slider {
+  width: 80px;
+  accent-color: var(--accent);
+}
+
+/* Task assignee dots */
+.task-assignees {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.task-assignee-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 /* Confirm Modal */

@@ -47,6 +47,7 @@ export default function TaskListView({
   onSetFilters,
   addTaskInputRef,
   defaultFiltersOpen = true,
+  settings,
 }) {
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [showCompleted, setShowCompleted] = useState(true)
@@ -443,6 +444,8 @@ export default function TaskListView({
             showListName={showListName}
             listName={getListName(task)}
             tags={tags}
+            people={people}
+            settings={settings}
             onMoveUp={listId && index > 0 ? () => onMoveTask(task.id, -1) : null}
             onMoveDown={listId && index < activeTasks.length - 1 ? () => onMoveTask(task.id, 1) : null}
             lists={lists}
@@ -471,6 +474,8 @@ export default function TaskListView({
                   showListName={showListName}
                   listName={getListName(task)}
                   tags={tags}
+                  people={people}
+                  settings={settings}
                   onMoveUp={listId && index > 0 ? () => onMoveTask(task.id, -1) : null}
                   onMoveDown={listId && index < completedTasks.length - 1 ? () => onMoveTask(task.id, 1) : null}
                   lists={lists}

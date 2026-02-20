@@ -3,6 +3,15 @@ import { v4 as uuidv4 } from 'uuid'
 
 const STORAGE_KEY = 'todo-app-data'
 
+const defaultSettings = {
+  showDates: true,
+  showTags: true,
+  showPeople: true,
+  taskListSize: 14,
+  sidebarSize: 14,
+  detailSize: 14,
+}
+
 const defaultData = {
   groups: [
     { id: 'default-group', name: 'Uncategorized lists', listIds: ['list-tasks'], personId: null },
@@ -13,6 +22,7 @@ const defaultData = {
   tasks: [],
   people: [],
   tags: [],
+  settings: { ...defaultSettings },
 }
 
 function loadData() {
@@ -22,6 +32,8 @@ function loadData() {
       const parsed = JSON.parse(raw)
       if (!parsed.people) parsed.people = []
       if (!parsed.tags) parsed.tags = []
+      if (!parsed.settings) parsed.settings = { ...defaultSettings }
+      else parsed.settings = { ...defaultSettings, ...parsed.settings }
       parsed.groups = parsed.groups.map((g) => ({
         personId: null,
         ...g,
@@ -341,6 +353,10 @@ export function useStore() {
     }))
   }, [update])
 
+  const updateSettings = useCallback((changes) => {
+    update((d) => ({ ...d, settings: { ...d.settings, ...changes } }))
+  }, [update])
+
   return {
     data,
     addTask,
@@ -369,6 +385,7 @@ export function useStore() {
     deleteTag,
     renameTag,
     updateTag,
+    updateSettings,
   }
 }
 

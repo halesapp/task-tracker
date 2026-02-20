@@ -23,6 +23,7 @@ import {
   Tag,
   Pencil,
   FolderInput,
+  Settings,
 } from 'lucide-react'
 
 const smartLists = [
@@ -62,6 +63,7 @@ export default function Sidebar({
   darkMode,
   onToggleDarkMode,
   onDeleteAll,
+  onOpenSettings,
 }) {
   const [collapsedGroups, setCollapsedGroups] = useState({})
   const [addingListInGroup, setAddingListInGroup] = useState(null)
@@ -119,6 +121,13 @@ export default function Sidebar({
                 <span className={`sync-dot ${connectionOk === true ? 'ok' : connectionOk === false ? 'err' : ''}`} />
               )}
             </span>
+          </button>
+          <button
+            className="sidebar-icon-btn"
+            onClick={onOpenSettings}
+            title="Settings"
+          >
+            <Settings size={16} />
           </button>
           <button
             className="sidebar-icon-btn"

@@ -16,6 +16,8 @@ export default function PriorityView({
   selectedTaskId,
   lists,
   tags,
+  people,
+  settings,
 }) {
   const [collapsed, setCollapsed] = useState({})
 
@@ -67,6 +69,8 @@ export default function PriorityView({
                 showListName
                 listName={getListName(task)}
                 tags={tags}
+                people={people}
+                settings={settings}
               />
             ))}
           </div>
