@@ -38,7 +38,7 @@ export default function PeopleView({
   }
 
   return (
-    <div style={{ padding: '0 32px 32px' }}>
+    <div style={{ padding: '0 32px 32px', flex: 1, overflowY: 'auto' }}>
       <div className="add-task" style={{ margin: '0 0 24px' }}>
         <Plus size={20} className="plus-icon" />
         <input
@@ -60,7 +60,7 @@ export default function PeopleView({
       {people.map((person) => {
         const personGroups = getPersonGroups(person.id)
         const personTasks = getPersonTasks(person.id)
-        const expanded = expandedPeople[person.id] !== false
+        const expanded = expandedPeople[person.id] === true
 
         return (
           <div key={person.id} className="person-card">

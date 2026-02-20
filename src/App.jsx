@@ -7,6 +7,7 @@ import PeopleView from './components/PeopleView'
 import GanttView from './components/GanttView'
 import PriorityView from './components/PriorityView'
 import DeleteAllModal from './components/DeleteAllModal'
+import ConfirmModal from './components/ConfirmModal'
 import SearchOverlay from './components/SearchOverlay'
 import SyncPanel from './components/SyncPanel'
 import TagsView from './components/TagsView'
@@ -34,6 +35,7 @@ export default function App() {
   const [showSearch, setShowSearch] = useState(false)
   const [showSync, setShowSync] = useState(false)
   const [showDeleteAll, setShowDeleteAll] = useState(false)
+  const [confirmModal, setConfirmModal] = useState(null) // { message, onConfirm }
   const [darkMode, setDarkMode] = useState(loadDarkMode)
   const sync = useSync(data)
   const fileInputRef = useRef(null)
@@ -248,27 +250,52 @@ export default function App() {
   }
 
   function handleDeleteTask(taskId) {
-    store.deleteTask(taskId)
-    setSelectedTaskId(null)
+    const task = data.tasks.find((t) => t.id === taskId)
+    setConfirmModal({
+      message: `Delete "${task?.title || 'this task'}"? This cannot be undone.`,
+      onConfirm: () => {
+        store.deleteTask(taskId)
+        setSelectedTaskId(null)
+      },
+    })
   }
 
   function handleDeleteList(listId) {
-    store.deleteList(listId)
-    if (activeView === listId) {
-      setActiveView('_all')
-      setSelectedTaskId(null)
-      setFilters({})
-    }
+    const list = data.lists.find((l) => l.id === listId)
+    const taskCount = data.tasks.filter((t) => t.listId === listId).length
+    const message = taskCount > 0
+      ? `Delete "${list?.name || 'this list'}" and its ${taskCount} task${taskCount !== 1 ? 's' : ''}? This cannot be undone.`
+      : `Delete "${list?.name || 'this list'}"? This cannot be undone.`
+    setConfirmModal({
+      message,
+      onConfirm: () => {
+        store.deleteList(listId)
+        if (activeView === listId) {
+          setActiveView('_all')
+          setSelectedTaskId(null)
+          setFilters({})
+        }
+      },
+    })
   }
 
   function handleDeleteGroup(groupId) {
     const group = data.groups.find((g) => g.id === groupId)
-    store.deleteGroup(groupId)
-    if (group && group.listIds.includes(activeView)) {
-      setActiveView('_all')
-      setSelectedTaskId(null)
-      setFilters({})
-    }
+    const listCount = group?.listIds.length || 0
+    const message = listCount > 0
+      ? `Delete "${group?.name || 'this group'}" and its ${listCount} list${listCount !== 1 ? 's' : ''} (and all their tasks)? This cannot be undone.`
+      : `Delete "${group?.name || 'this group'}"? This cannot be undone.`
+    setConfirmModal({
+      message,
+      onConfirm: () => {
+        store.deleteGroup(groupId)
+        if (group && group.listIds.includes(activeView)) {
+          setActiveView('_all')
+          setSelectedTaskId(null)
+          setFilters({})
+        }
+      },
+    })
   }
 
   function handleSearchSelect(taskId) {
@@ -370,6 +397,7 @@ export default function App() {
         onRenameGroup={store.renameGroup}
         onMoveGroup={store.moveGroup}
         onMoveList={store.moveList}
+        onMoveListToGroup={store.moveListToGroup}
         onDeleteList={handleDeleteList}
         onDeleteGroup={handleDeleteGroup}
         taskCounts={taskCounts}
@@ -484,6 +512,7 @@ export default function App() {
             listId={activeView.startsWith('_') ? null : activeView}
             onUpdateTask={store.updateTask}
             onMoveTask={store.moveTask}
+            onMoveTaskToList={(taskId, listId) => store.updateTask(taskId, { listId })}
             filters={filters}
             onSetFilters={setFilters}
             addTaskInputRef={addTaskInputRef}
@@ -517,6 +546,14 @@ export default function App() {
           tags={data.tags || []}
           onSelect={handleSearchSelect}
           onClose={() => setShowSearch(false)}
+        />
+      )}
+
+      {confirmModal && (
+        <ConfirmModal
+          message={confirmModal.message}
+          onConfirm={confirmModal.onConfirm}
+          onClose={() => setConfirmModal(null)}
         />
       )}
 

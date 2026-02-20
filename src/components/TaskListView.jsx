@@ -42,6 +42,7 @@ export default function TaskListView({
   listId,
   onUpdateTask,
   onMoveTask,
+  onMoveTaskToList,
   filters,
   onSetFilters,
   addTaskInputRef,
@@ -444,6 +445,8 @@ export default function TaskListView({
             tags={tags}
             onMoveUp={listId && index > 0 ? () => onMoveTask(task.id, -1) : null}
             onMoveDown={listId && index < activeTasks.length - 1 ? () => onMoveTask(task.id, 1) : null}
+            lists={lists}
+            onMoveTaskToList={onMoveTaskToList}
           />
         ))}
 
@@ -470,6 +473,8 @@ export default function TaskListView({
                   tags={tags}
                   onMoveUp={listId && index > 0 ? () => onMoveTask(task.id, -1) : null}
                   onMoveDown={listId && index < completedTasks.length - 1 ? () => onMoveTask(task.id, 1) : null}
+                  lists={lists}
+                  onMoveTaskToList={onMoveTaskToList}
                 />
               ))}
           </>

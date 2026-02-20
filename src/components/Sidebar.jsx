@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import ContextMenu from './ContextMenu'
 import {
   Sun,
   Star,
@@ -20,6 +21,8 @@ import {
   Flag,
   Trash2,
   Tag,
+  Pencil,
+  FolderInput,
 } from 'lucide-react'
 
 const smartLists = [
@@ -49,6 +52,7 @@ export default function Sidebar({
   onMoveList,
   onDeleteList,
   onDeleteGroup,
+  onMoveListToGroup,
   taskCounts,
   onOpenSearch,
   onOpenSync,
@@ -67,6 +71,7 @@ export default function Sidebar({
   const [newListName, setNewListName] = useState('')
   const [addingGroup, setAddingGroup] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
+  const [contextMenu, setContextMenu] = useState(null)
 
   function toggleGroup(groupId) {
     setCollapsedGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }))
@@ -257,6 +262,20 @@ export default function Sidebar({
                         setEditingListId(list.id)
                         setEditName(list.name)
                       }}
+                      onContextMenu={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setContextMenu({
+                          x: e.clientX,
+                          y: e.clientY,
+                          listId: list.id,
+                          listName: list.name,
+                          groupId: group.id,
+                          listIndex,
+                          groupListCount: groupLists.length,
+                          groupCount: data.groups.length,
+                        })
+                      }}
                     >
                       <span className="icon" style={{ color: list.color }}>
                         <Icon size={18} />
@@ -354,6 +373,55 @@ export default function Sidebar({
           </div>
         )
       })}
+
+      {contextMenu && (() => {
+        const otherGroups = data.groups.filter((g) => g.id !== contextMenu.groupId)
+        const menuItems = [
+          {
+            label: 'Rename',
+            icon: <Pencil size={14} />,
+            onClick: () => {
+              setEditingListId(contextMenu.listId)
+              setEditName(contextMenu.listName)
+            },
+          },
+          {
+            label: 'Move up',
+            icon: <ArrowUp size={14} />,
+            disabled: contextMenu.listIndex === 0,
+            onClick: () => onMoveList(contextMenu.groupId, contextMenu.listId, -1),
+          },
+          {
+            label: 'Move down',
+            icon: <ArrowDown size={14} />,
+            disabled: contextMenu.listIndex >= contextMenu.groupListCount - 1,
+            onClick: () => onMoveList(contextMenu.groupId, contextMenu.listId, 1),
+          },
+          ...(otherGroups.length > 0 ? [{
+            label: 'Move to group',
+            icon: <FolderInput size={14} />,
+            submenu: otherGroups.map((g) => ({
+              label: g.name,
+              onClick: () => onMoveListToGroup?.(contextMenu.listId, g.id),
+            })),
+          }] : []),
+          { separator: true },
+          {
+            label: 'Delete',
+            icon: <Trash2 size={14} />,
+            danger: true,
+            onClick: () => onDeleteList(contextMenu.listId),
+          },
+        ]
+        return (
+          <ContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            items={menuItems}
+            onClose={() => setContextMenu(null)}
+          />
+        )
+      })()}
 
       <div className="sidebar-bottom">
         {addingGroup ? (

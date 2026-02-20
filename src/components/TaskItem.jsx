@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Check, Star, CalendarDays, ListChecks, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react'
+import { Check, Star, CalendarDays, ListChecks, ArrowUp, ArrowDown, ChevronDown, List } from 'lucide-react'
 import { format, isPast, isToday } from 'date-fns'
 import { parseDate } from '../utils/date'
+import ContextMenu from './ContextMenu'
 
 const priorityColors = {
   low: '#107c10',
@@ -21,8 +22,11 @@ export default function TaskItem({
   tags,
   onMoveUp,
   onMoveDown,
+  lists,
+  onMoveTaskToList,
 }) {
   const [subtasksExpanded, setSubtasksExpanded] = useState(false)
+  const [ctxMenu, setCtxMenu] = useState(null)
 
   const completedSubtasks = task.subtasks.filter((s) => s.completed).length
   const totalSubtasks = task.subtasks.length
@@ -38,6 +42,11 @@ export default function TaskItem({
     <div
       className={`task-item ${task.completed ? 'completed' : ''} ${selected ? 'selected' : ''}`}
       onClick={onClick}
+      onContextMenu={(e) => {
+        if (!lists?.length || !onMoveTaskToList) return
+        e.preventDefault()
+        setCtxMenu({ x: e.clientX, y: e.clientY })
+      }}
     >
       {hasPriority && (
         <div
@@ -145,6 +154,25 @@ export default function TaskItem({
       >
         <Star size={16} fill={task.important ? 'currentColor' : 'none'} />
       </button>
+
+      {ctxMenu && lists?.length > 0 && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          items={[
+            {
+              label: 'Move to list',
+              icon: <List size={14} />,
+              submenu: lists.map((l) => ({
+                label: l.name,
+                check: l.id === task.listId,
+                onClick: () => onMoveTaskToList(task.id, l.id),
+              })),
+            },
+          ]}
+          onClose={() => setCtxMenu(null)}
+        />
+      )}
     </div>
   )
 }

@@ -239,6 +239,19 @@ export function useStore() {
     }))
   }, [update])
 
+  const moveListToGroup = useCallback((listId, targetGroupId) => {
+    update((d) => ({
+      ...d,
+      groups: d.groups.map((g) => {
+        if (g.id === targetGroupId) {
+          if (g.listIds.includes(listId)) return g
+          return { ...g, listIds: [...g.listIds, listId] }
+        }
+        return { ...g, listIds: g.listIds.filter((id) => id !== listId) }
+      }),
+    }))
+  }, [update])
+
   const moveTask = useCallback((taskId, direction) => {
     update((d) => {
       const task = d.tasks.find((t) => t.id === taskId)
@@ -343,6 +356,7 @@ export function useStore() {
     deleteList,
     deleteGroup,
     moveList,
+    moveListToGroup,
     moveTask,
     renameList,
     renameGroup,
