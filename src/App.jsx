@@ -333,7 +333,7 @@ export default function App() {
 
   async function handleConflictUseRemote() {
     sync.dismissConflict()
-    const pulled = await sync.pull()
+    const pulled = await sync.pull({ skipConflictCheck: true })
     if (pulled) {
       localStorage.setItem('todo-app-data', JSON.stringify(pulled))
       window.location.reload()

@@ -92,6 +92,11 @@ export function useSync(data) {
 
   // Per-key snapshots of last synced JSON strings
   const lastSnapshots = useRef({})
+  // Always-current ref to data, used inside callbacks without stale closure issues
+  const dataRef = useRef(data)
+
+  // Keep dataRef current on every render
+  dataRef.current = data
 
   const isConfigured = !!(upstashUrl && upstashToken)
 
@@ -156,20 +161,21 @@ export function useSync(data) {
     if (!upstashUrl || !upstashToken) return
     setSyncError(null)
 
-    // Conflict check: if DB was synced by someone else after our last sync
+    // Conflict check: if DB was synced more recently than our last sync (or we've never synced
+    // but the DB already has data from another device), warn before overwriting.
     if (!skipConflictCheck) {
-      const localLastSynced = localStorage.getItem(LOCAL_LAST_SYNCED_KEY)
-      if (localLastSynced) {
-        try {
-          const remoteSyncedAt = await fetchRemoteSyncedAt(upstashUrl, upstashToken)
-          if (remoteSyncedAt && remoteSyncedAt > localLastSynced) {
-            setConflictInfo({ remoteSyncedAt, localLastSyncedAt: localLastSynced })
-            setConnectionOk(true)
-            return
-          }
-        } catch {
-          // If we can't check, proceed optimistically
+      try {
+        const remoteSyncedAt = await fetchRemoteSyncedAt(upstashUrl, upstashToken)
+        const localLastSynced = localStorage.getItem(LOCAL_LAST_SYNCED_KEY)
+        // Conflict if: remote has a timestamp AND it's newer than our last sync
+        // (includes the case where localLastSynced is null — we've never synced this device)
+        if (remoteSyncedAt && (!localLastSynced || remoteSyncedAt > localLastSynced)) {
+          setConflictInfo({ remoteSyncedAt, localLastSyncedAt: localLastSynced })
+          setConnectionOk(true)
+          return
         }
+      } catch {
+        // If we can't reach the DB to check, proceed optimistically
       }
     }
 
@@ -177,8 +183,12 @@ export function useSync(data) {
     try {
       const result = await pushChanged(upstashUrl, upstashToken, pushData, lastSnapshots.current)
       lastSnapshots.current = snapshotData(pushData)
-      const now = result?.syncedAt || new Date().toISOString()
-      recordLastSynced(now)
+      // Only update localLastSynced if we actually wrote something to the DB.
+      // If pushChanged returned null (nothing changed), don't stamp a fake timestamp —
+      // that would make local appear newer than the DB and defeat future conflict detection.
+      if (result) {
+        recordLastSynced(result.syncedAt)
+      }
       setSyncStatus('synced')
       setConnectionOk(true)
     } catch (err) {
@@ -189,8 +199,27 @@ export function useSync(data) {
     }
   }, [upstashUrl, upstashToken])
 
-  const pull = useCallback(async () => {
+  const pull = useCallback(async ({ skipConflictCheck = false } = {}) => {
     if (!upstashUrl || !upstashToken) return null
+
+    // Conflict check: warn if local has unsaved changes that pulling would overwrite.
+    if (!skipConflictCheck && Object.keys(lastSnapshots.current).length > 0) {
+      const localHasUnsavedChanges = DATA_KEYS.some(
+        (key) => JSON.stringify(dataRef.current?.[key] || []) !== lastSnapshots.current[key]
+      )
+      if (localHasUnsavedChanges) {
+        try {
+          const remoteSyncedAt = await fetchRemoteSyncedAt(upstashUrl, upstashToken)
+          const localLastSynced = localStorage.getItem(LOCAL_LAST_SYNCED_KEY)
+          setConflictInfo({ remoteSyncedAt, localLastSyncedAt: localLastSynced })
+          setConnectionOk(true)
+          return null
+        } catch {
+          // proceed optimistically
+        }
+      }
+    }
+
     setSyncing(true)
     setSyncError(null)
     try {
@@ -201,8 +230,9 @@ export function useSync(data) {
         return null
       }
       lastSnapshots.current = snapshotData(result.data)
-      const syncedAt = result.remoteSyncedAt || new Date().toISOString()
-      recordLastSynced(syncedAt)
+      if (result.remoteSyncedAt) {
+        recordLastSynced(result.remoteSyncedAt)
+      }
       setSyncStatus('synced')
       setConnectionOk(true)
       return result.data
