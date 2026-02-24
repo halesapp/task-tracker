@@ -25,6 +25,7 @@ export default function TaskItem({
   onMoveUp,
   onMoveDown,
   lists,
+  groups,
   onMoveTaskToList,
 }) {
   const [subtasksExpanded, setSubtasksExpanded] = useState(false)
@@ -182,17 +183,39 @@ export default function TaskItem({
         <ContextMenu
           x={ctxMenu.x}
           y={ctxMenu.y}
-          items={[
-            {
-              label: 'Move to list',
-              icon: <List size={14} />,
-              submenu: lists.map((l) => ({
-                label: l.name,
-                check: l.id === task.listId,
-                onClick: () => onMoveTaskToList(task.id, l.id),
-              })),
-            },
-          ]}
+          items={(() => {
+            const items = []
+            // Groups with their lists as submenus
+            ;(groups || []).forEach((group) => {
+              const groupLists = (group.listIds || [])
+                .map((id) => lists.find((l) => l.id === id))
+                .filter(Boolean)
+              if (!groupLists.length) return
+              items.push({
+                label: group.name,
+                submenu: groupLists.map((l) => ({
+                  label: l.name,
+                  check: l.id === task.listId,
+                  onClick: () => onMoveTaskToList(task.id, l.id),
+                })),
+              })
+            })
+            // Ungrouped lists
+            const groupedIds = new Set((groups || []).flatMap((g) => g.listIds || []))
+            const ungrouped = lists.filter((l) => !groupedIds.has(l.id))
+            if (ungrouped.length > 0) {
+              if (items.length > 0) items.push({ separator: true })
+              ungrouped.forEach((l) => {
+                items.push({
+                  label: l.name,
+                  icon: <List size={14} />,
+                  check: l.id === task.listId,
+                  onClick: () => onMoveTaskToList(task.id, l.id),
+                })
+              })
+            }
+            return items
+          })()}
           onClose={() => setCtxMenu(null)}
         />
       )}

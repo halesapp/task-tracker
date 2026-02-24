@@ -13,6 +13,7 @@ import SearchOverlay from './components/SearchOverlay'
 import SyncPanel from './components/SyncPanel'
 import SettingsPanel from './components/SettingsPanel'
 import TagsView from './components/TagsView'
+import CompletedView from './components/CompletedView'
 import { useStore } from './hooks/useStore'
 import { useSync } from './hooks/useSync'
 import { Download, Upload } from 'lucide-react'
@@ -29,7 +30,7 @@ function loadDarkMode() {
 
 export default function App() {
   const store = useStore()
-  const { data } = store
+  const { data, undo, canUndo, redo, canRedo, replaceData } = store
   const [activeView, setActiveView] = useState('_all')
   const [selectedTaskId, setSelectedTaskId] = useState(null)
   const [calendarSelectedDate, setCalendarSelectedDate] = useState(null)
@@ -40,7 +41,7 @@ export default function App() {
   const [showDeleteAll, setShowDeleteAll] = useState(false)
   const [confirmModal, setConfirmModal] = useState(null) // { message, onConfirm }
   const [darkMode, setDarkMode] = useState(loadDarkMode)
-  const sync = useSync(data)
+  const sync = useSync(data, { onAutoMerge: (merged) => replaceData(merged) })
   const fileInputRef = useRef(null)
   const addTaskInputRef = useRef(null)
 
@@ -64,6 +65,15 @@ export default function App() {
   // Keyboard shortcuts
   useEffect(() => {
     function handleKeyDown(e) {
+      // Ctrl+Shift+Z or Cmd+Shift+Z for redo
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault()
+        if (canRedo) redo()
+      // Ctrl+Z or Cmd+Z for undo (no shift)
+      } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+        e.preventDefault()
+        if (canUndo) undo()
+      }
       // Ctrl+K or Cmd+K for search
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault()
@@ -92,18 +102,19 @@ export default function App() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [showSearch, selectedTaskId, sync, data])
+  }, [showSearch, selectedTaskId, sync, data, undo, canUndo, redo, canRedo])
 
   const taskCounts = useMemo(() => {
     const counts = {}
     const incomplete = data.tasks.filter((t) => !t.completed)
 
     counts['_all'] = incomplete.length
+    counts['_completed'] = data.tasks.filter((t) => t.completed).length
     counts['_important'] = incomplete.filter((t) => t.important).length
     counts['_planned'] = incomplete.filter((t) => t.dueDate).length
     counts['_priority'] = incomplete.filter((t) => t.priority && t.priority !== 'none').length
     counts['_people'] = data.people?.length || 0
-    counts['_gantt'] = data.tasks.filter((t) => t.startDate && t.endDate).length
+    counts['_gantt'] = data.tasks.filter((t) => t.startDate && t.dueDate).length
 
     data.lists.forEach((list) => {
       counts[list.id] = incomplete.filter((t) => t.listId === list.id).length
@@ -198,6 +209,7 @@ export default function App() {
       case '_people': return 'People'
       case '_gantt': return 'Gantt Chart'
       case '_tags': return 'Tags'
+      case '_completed': return 'Completed'
       default: {
         const list = data.lists.find((l) => l.id === activeView)
         return list?.name || 'Tasks'
@@ -226,6 +238,7 @@ export default function App() {
       case '_people': return '#0078d4'
       case '_gantt': return '#e74856'
       case '_tags': return '#8764b8'
+      case '_completed': return '#6b7280'
       default: {
         const list = data.lists.find((l) => l.id === activeView)
         return list?.color || '#2564cf'
@@ -244,7 +257,6 @@ export default function App() {
 
     if (options.dueDate) updates.dueDate = options.dueDate
     if (options.startDate) updates.startDate = options.startDate
-    if (options.endDate) updates.endDate = options.endDate
     if (options.assigneeId) updates.assigneeIds = [options.assigneeId]
     if (options.important) updates.important = true
     if (options.priority) updates.priority = options.priority
@@ -315,29 +327,23 @@ export default function App() {
   }
 
   async function handleSyncPush() {
-    await sync.push(data)
+    await sync.push(data, { onMergedData: (m) => replaceData(m) })
   }
 
   async function handleSyncPull() {
     const pulled = await sync.pull()
-    if (pulled) {
-      localStorage.setItem('todo-app-data', JSON.stringify(pulled))
-      window.location.reload()
-    }
+    if (pulled) replaceData(pulled)
   }
 
   async function handleConflictKeepLocal() {
     sync.dismissConflict()
-    await sync.push(data, { skipConflictCheck: true })
+    await sync.push(data, { skipConflictCheck: true, onMergedData: (m) => replaceData(m) })
   }
 
   async function handleConflictUseRemote() {
     sync.dismissConflict()
     const pulled = await sync.pull({ skipConflictCheck: true })
-    if (pulled) {
-      localStorage.setItem('todo-app-data', JSON.stringify(pulled))
-      window.location.reload()
-    }
+    if (pulled) replaceData(pulled)
   }
 
   function handleDeleteAll() {
@@ -398,6 +404,7 @@ export default function App() {
   const isGantt = activeView === '_gantt'
   const isPriority = activeView === '_priority'
   const isTags = activeView === '_tags'
+  const isCompleted = activeView === '_completed'
 
   return (
     <div className="app">
@@ -439,7 +446,19 @@ export default function App() {
       />
 
       <div className="main">
-        {isCalendar ? (
+        {isCompleted ? (
+          <>
+            <div className="main-header">
+              <h2 style={{ color: getAccentColor() }}>Completed</h2>
+            </div>
+            <CompletedView
+              tasks={data.tasks}
+              lists={data.lists}
+              onDeleteTasks={store.deleteTasks}
+              onSelectTask={setSelectedTaskId}
+            />
+          </>
+        ) : isCalendar ? (
           <>
             <div className="main-header">
               <h2 style={{ color: getAccentColor() }}>Calendar</h2>
@@ -563,6 +582,12 @@ export default function App() {
           onAddSubtask={store.addSubtask}
           onToggleSubtask={store.toggleSubtask}
           onDeleteSubtask={store.deleteSubtask}
+          onPromoteSubtask={store.promoteSubtask}
+          onDemoteTask={(taskId, targetTaskId) => {
+            store.demoteTaskToSubtask(taskId, targetTaskId)
+            setSelectedTaskId(null)
+          }}
+          siblingTasks={data.tasks.filter((t) => t.listId === selectedTask.listId && t.id !== selectedTask.id)}
           people={data.people || []}
           tags={data.tags || []}
           onAddTag={store.addTag}

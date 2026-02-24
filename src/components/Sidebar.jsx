@@ -24,6 +24,7 @@ import {
   Pencil,
   FolderInput,
   Settings,
+  CheckCircle2,
 } from 'lucide-react'
 
 const smartLists = [
@@ -35,6 +36,7 @@ const smartLists = [
   { id: '_people', name: 'People', icon: Users, className: 'people' },
   { id: '_gantt', name: 'Gantt Chart', icon: GanttChart, className: 'gantt' },
   { id: '_tags', name: 'Tags', icon: Tag, className: 'tags' },
+  { id: '_completed', name: 'Completed', icon: CheckCircle2, className: 'completed' },
 ]
 
 function getListIcon() {

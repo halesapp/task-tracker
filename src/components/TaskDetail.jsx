@@ -4,7 +4,6 @@ import {
   X,
   Check,
   Star,
-  CalendarDays,
   Trash2,
   Plus,
   User,
@@ -12,6 +11,8 @@ import {
   Flag,
   Tag,
   AlertTriangle,
+  ArrowUpRight,
+  CornerDownRight,
 } from 'lucide-react'
 
 const PRIORITIES = [
@@ -31,6 +32,9 @@ export default function TaskDetail({
   onAddSubtask,
   onToggleSubtask,
   onDeleteSubtask,
+  onPromoteSubtask,
+  onDemoteTask,
+  siblingTasks,
   people,
   tags,
   onAddTag,
@@ -40,11 +44,11 @@ export default function TaskDetail({
   const [subtaskInput, setSubtaskInput] = useState('')
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showStartPicker, setShowStartPicker] = useState(false)
-  const [showEndPicker, setShowEndPicker] = useState(false)
   const [showAssigneePicker, setShowAssigneePicker] = useState(false)
   const [showPriorityPicker, setShowPriorityPicker] = useState(false)
   const [showTagPicker, setShowTagPicker] = useState(false)
   const [newTagName, setNewTagName] = useState('')
+  const [showDemotePicker, setShowDemotePicker] = useState(false)
 
   function handleTitleBlur() {
     if (title.trim() && title !== task.title) {
@@ -136,6 +140,13 @@ export default function TaskDetail({
               <span className={`subtask-title ${sub.completed ? 'completed' : ''}`}>
                 {sub.title}
               </span>
+              <button
+                className="delete-subtask"
+                title="Promote to task"
+                onClick={() => onPromoteSubtask(task.id, sub.id)}
+              >
+                <ArrowUpRight size={14} />
+              </button>
               <button
                 className="delete-subtask"
                 onClick={() => onDeleteSubtask(task.id, sub.id)}
@@ -313,38 +324,6 @@ export default function TaskDetail({
           </div>
         )}
 
-        {/* Due date */}
-        <div
-          className={`detail-field ${task.dueDate ? 'has-value' : ''}`}
-          onClick={() => setShowDatePicker(!showDatePicker)}
-        >
-          <span className="field-icon"><CalendarDays size={18} /></span>
-          <span>{task.dueDate ? 'Due: ' + parseDate(task.dueDate).toLocaleDateString() : 'Add due date'}</span>
-          {task.dueDate && (
-            <button
-              style={{ marginLeft: 'auto' }}
-              onClick={(e) => {
-                e.stopPropagation()
-                onUpdate(task.id, { dueDate: null })
-              }}
-            >
-              <X size={14} />
-            </button>
-          )}
-        </div>
-        {showDatePicker && (
-          <div className="date-picker-inline">
-            <input
-              type="date"
-              value={task.dueDate ? task.dueDate.split('T')[0] : ''}
-              onChange={(e) => {
-                onUpdate(task.id, { dueDate: e.target.value || null })
-                setShowDatePicker(false)
-              }}
-            />
-          </div>
-        )}
-
         {/* Start date */}
         <div
           className={`detail-field ${task.startDate ? 'has-value' : ''}`}
@@ -369,6 +348,7 @@ export default function TaskDetail({
             <input
               type="date"
               value={task.startDate ? task.startDate.split('T')[0] : ''}
+              max={task.dueDate ? task.dueDate.split('T')[0] : undefined}
               onChange={(e) => {
                 onUpdate(task.id, { startDate: e.target.value || null })
                 setShowStartPicker(false)
@@ -379,33 +359,68 @@ export default function TaskDetail({
 
         {/* End date */}
         <div
-          className={`detail-field ${task.endDate ? 'has-value' : ''}`}
-          onClick={() => setShowEndPicker(!showEndPicker)}
+          className={`detail-field ${task.dueDate ? 'has-value' : ''}`}
+          onClick={() => setShowDatePicker(!showDatePicker)}
         >
           <span className="field-icon"><Flag size={18} /></span>
-          <span>{task.endDate ? 'End: ' + parseDate(task.endDate).toLocaleDateString() : 'Add end date'}</span>
-          {task.endDate && (
+          <span>{task.dueDate ? 'End: ' + parseDate(task.dueDate).toLocaleDateString() : 'Add end date'}</span>
+          {task.dueDate && (
             <button
               style={{ marginLeft: 'auto' }}
               onClick={(e) => {
                 e.stopPropagation()
-                onUpdate(task.id, { endDate: null })
+                onUpdate(task.id, { dueDate: null })
               }}
             >
               <X size={14} />
             </button>
           )}
         </div>
-        {showEndPicker && (
+        {showDatePicker && (
           <div className="date-picker-inline">
             <input
               type="date"
-              value={task.endDate ? task.endDate.split('T')[0] : ''}
+              value={task.dueDate ? task.dueDate.split('T')[0] : ''}
+              min={task.startDate ? task.startDate.split('T')[0] : undefined}
               onChange={(e) => {
-                onUpdate(task.id, { endDate: e.target.value || null })
-                setShowEndPicker(false)
+                onUpdate(task.id, { dueDate: e.target.value || null })
+                setShowDatePicker(false)
               }}
             />
+          </div>
+        )}
+
+        {/* Move to subtask of */}
+        <div
+          className="detail-field"
+          onClick={() => setShowDemotePicker(!showDemotePicker)}
+        >
+          <span className="field-icon"><CornerDownRight size={18} /></span>
+          <span>Move to subtask of…</span>
+        </div>
+        {showDemotePicker && (
+          <div className="assignee-picker">
+            {(!siblingTasks || siblingTasks.length === 0) ? (
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: '6px 0' }}>
+                No other tasks in this list.
+              </div>
+            ) : (
+              siblingTasks.map((t) => (
+                <div
+                  key={t.id}
+                  className="assignee-option"
+                  onClick={() => {
+                    onDemoteTask(task.id, t.id)
+                    setShowDemotePicker(false)
+                  }}
+                >
+                  <div className={`checkbox ${t.completed ? 'checked' : ''}`} style={{ flexShrink: 0, pointerEvents: 'none' }}>
+                    {t.completed && <Check size={10} strokeWidth={3} />}
+                  </div>
+                  <span>{t.title}</span>
+                </div>
+              ))
+            )}
           </div>
         )}
 

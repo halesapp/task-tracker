@@ -25,36 +25,32 @@ const defaultData = {
   settings: { ...defaultSettings },
 }
 
+function normalizeData(parsed) {
+  if (!parsed.people) parsed.people = []
+  if (!parsed.tags) parsed.tags = []
+  if (!parsed.settings) parsed.settings = { ...defaultSettings }
+  else parsed.settings = { ...defaultSettings, ...parsed.settings }
+  parsed.groups = parsed.groups.map((g) => ({ personId: null, ...g }))
+  parsed.tasks = parsed.tasks.map((t) => {
+    const { assigneeId, endDate, ...rest } = {
+      startDate: null,
+      endDate: null,
+      assigneeIds: [],
+      priority: 'none',
+      tagIds: [],
+      ...t,
+    }
+    if (!rest.dueDate && endDate) rest.dueDate = endDate
+    if (!rest.assigneeIds?.length && assigneeId) rest.assigneeIds = [assigneeId]
+    return rest
+  })
+  return parsed
+}
+
 function loadData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      if (!parsed.people) parsed.people = []
-      if (!parsed.tags) parsed.tags = []
-      if (!parsed.settings) parsed.settings = { ...defaultSettings }
-      else parsed.settings = { ...defaultSettings, ...parsed.settings }
-      parsed.groups = parsed.groups.map((g) => ({
-        personId: null,
-        ...g,
-      }))
-      parsed.tasks = parsed.tasks.map((t) => {
-        const { assigneeId, ...rest } = {
-          startDate: null,
-          endDate: null,
-          assigneeIds: [],
-          priority: 'none',
-          tagIds: [],
-          ...t,
-        }
-        // Migrate old single assigneeId to assigneeIds array
-        if (!rest.assigneeIds?.length && assigneeId) {
-          rest.assigneeIds = [assigneeId]
-        }
-        return rest
-      })
-      return parsed
-    }
+    if (raw) return normalizeData(JSON.parse(raw))
   } catch {}
   return defaultData
 }
@@ -64,13 +60,50 @@ function saveData(data) {
 }
 
 export function useStore() {
-  const [data, setData] = useState(loadData)
+  const [state, setState] = useState(() => ({ data: loadData(), history: [], future: [] }))
+  const data = state.data
 
   const update = useCallback((updater) => {
-    setData((prev) => {
-      const next = updater(prev)
+    setState((prev) => {
+      const next = updater(prev.data)
       saveData(next)
-      return next
+      return {
+        data: next,
+        history: [...prev.history.slice(-9), prev.data],
+        future: [],
+      }
+    })
+  }, [])
+
+  const replaceData = useCallback((newData) => {
+    const normalized = normalizeData(newData)
+    saveData(normalized)
+    setState({ data: normalized, history: [], future: [] })
+  }, [])
+
+  const undo = useCallback(() => {
+    setState((prev) => {
+      if (!prev.history.length) return prev
+      const restored = prev.history[prev.history.length - 1]
+      saveData(restored)
+      return {
+        data: restored,
+        history: prev.history.slice(0, -1),
+        future: [prev.data, ...prev.future.slice(0, 9)],
+      }
+    })
+  }, [])
+
+  const redo = useCallback(() => {
+    setState((prev) => {
+      if (!prev.future.length) return prev
+      const restored = prev.future[0]
+      saveData(restored)
+      return {
+        data: restored,
+        history: [...prev.history.slice(-9), prev.data],
+        future: prev.future.slice(1),
+      }
     })
   }, [])
 
@@ -84,7 +117,6 @@ export function useStore() {
       createdAt: new Date().toISOString(),
       dueDate: null,
       startDate: null,
-      endDate: null,
       assigneeIds: [],
       priority: 'none',
       tagIds: [],
@@ -117,6 +149,14 @@ export function useStore() {
     update((d) => ({
       ...d,
       tasks: d.tasks.filter((t) => t.id !== taskId),
+    }))
+  }, [update])
+
+  const deleteTasks = useCallback((taskIds) => {
+    const idSet = new Set(taskIds)
+    update((d) => ({
+      ...d,
+      tasks: d.tasks.filter((t) => !idSet.has(t.id)),
     }))
   }, [update])
 
@@ -364,12 +404,71 @@ export function useStore() {
     update((d) => ({ ...d, settings: { ...d.settings, ...changes } }))
   }, [update])
 
+  const promoteSubtask = useCallback((parentTaskId, subtaskId) => {
+    update((d) => {
+      const parent = d.tasks.find((t) => t.id === parentTaskId)
+      if (!parent) return d
+      const sub = parent.subtasks.find((s) => s.id === subtaskId)
+      if (!sub) return d
+      const newTask = {
+        id: uuidv4(),
+        listId: parent.listId,
+        title: sub.title,
+        completed: sub.completed,
+        important: false,
+        createdAt: new Date().toISOString(),
+        dueDate: null,
+        startDate: null,
+        assigneeIds: [],
+        priority: 'none',
+        tagIds: [],
+        note: '',
+        subtasks: [],
+      }
+      return {
+        ...d,
+        tasks: [
+          ...d.tasks.map((t) =>
+            t.id === parentTaskId
+              ? { ...t, subtasks: t.subtasks.filter((s) => s.id !== subtaskId) }
+              : t
+          ),
+          newTask,
+        ],
+      }
+    })
+  }, [update])
+
+  const demoteTaskToSubtask = useCallback((taskId, targetTaskId) => {
+    update((d) => {
+      const task = d.tasks.find((t) => t.id === taskId)
+      if (!task) return d
+      const subtask = { id: task.id, title: task.title, completed: task.completed }
+      return {
+        ...d,
+        tasks: d.tasks
+          .filter((t) => t.id !== taskId)
+          .map((t) =>
+            t.id === targetTaskId
+              ? { ...t, subtasks: [...t.subtasks, subtask] }
+              : t
+          ),
+      }
+    })
+  }, [update])
+
   return {
     data,
+    undo,
+    canUndo: state.history.length > 0,
+    redo,
+    canRedo: state.future.length > 0,
+    replaceData,
     addTask,
     toggleTask,
     toggleImportant,
     deleteTask,
+    deleteTasks,
     updateTask,
     addSubtask,
     toggleSubtask,
@@ -394,6 +493,8 @@ export function useStore() {
     renameTag,
     updateTag,
     updateSettings,
+    promoteSubtask,
+    demoteTaskToSubtask,
   }
 }
 

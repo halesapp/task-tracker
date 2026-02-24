@@ -20,7 +20,7 @@ const ROW_HEIGHT = 36
 const HEADER_HEIGHT = 50
 
 export default function GanttView({ tasks, lists, people, onSelectTask }) {
-  const ganttTasks = tasks.filter((t) => t.startDate && t.endDate)
+  const ganttTasks = tasks.filter((t) => t.startDate && t.dueDate)
 
   const [weekOffset, setWeekOffset] = useState(0)
 
@@ -31,7 +31,7 @@ export default function GanttView({ tasks, lists, people, onSelectTask }) {
 
   function getBarStyle(task) {
     const start = parseDate(task.startDate)
-    const end = parseDate(task.endDate)
+    const end = parseDate(task.dueDate)
     const dayOffset = differenceInDays(start, timelineStart)
     const duration = differenceInDays(end, start) + 1
     return {

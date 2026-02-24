@@ -33,18 +33,26 @@ export default function ConflictModal({ conflictInfo, onKeepLocal, onUseRemote, 
           Remote data was updated by another device after your last sync. Syncing now would overwrite those changes.
         </p>
 
-        <div className="conflict-timestamps">
-          <div className="conflict-ts-row">
-            <Clock size={13} />
-            <span>Your last sync</span>
-            <span className="conflict-ts-value">{timeAgo(conflictInfo.localLastSyncedAt)}</span>
+        {conflictInfo.conflictKeys?.length > 0 && (
+          <p className="conflict-keys">
+            Conflicting sections: <strong>{conflictInfo.conflictKeys.join(', ')}</strong>
+          </p>
+        )}
+
+        {conflictInfo.localLastSyncedAt && conflictInfo.remoteSyncedAt && (
+          <div className="conflict-timestamps">
+            <div className="conflict-ts-row">
+              <Clock size={13} />
+              <span>Your last sync</span>
+              <span className="conflict-ts-value">{timeAgo(conflictInfo.localLastSyncedAt)}</span>
+            </div>
+            <div className="conflict-ts-row">
+              <Clock size={13} />
+              <span>Remote last synced</span>
+              <span className="conflict-ts-value">{timeAgo(conflictInfo.remoteSyncedAt)}</span>
+            </div>
           </div>
-          <div className="conflict-ts-row">
-            <Clock size={13} />
-            <span>Remote last synced</span>
-            <span className="conflict-ts-value">{timeAgo(conflictInfo.remoteSyncedAt)}</span>
-          </div>
-        </div>
+        )}
 
         <div className="conflict-actions">
           <button className="conflict-btn-local" onClick={onKeepLocal}>

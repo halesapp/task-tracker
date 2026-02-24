@@ -55,8 +55,7 @@ export default function TaskListView({
   const [showFilters, setShowFilters] = useState(defaultFiltersOpen)
   const [selectedListId, setSelectedListId] = useState(listId || lists[0]?.id || '')
   const [dueDate, setDueDate] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0])
   const [assigneeId, setAssigneeId] = useState('')
   const [important, setImportant] = useState(false)
 
@@ -74,7 +73,6 @@ export default function TaskListView({
     const options = { listId: targetList }
     if (dueDate) options.dueDate = dueDate
     if (startDate) options.startDate = startDate
-    if (endDate) options.endDate = endDate
     if (assigneeId) options.assigneeId = assigneeId
     if (important) options.important = true
 
@@ -82,8 +80,7 @@ export default function TaskListView({
 
     setNewTaskTitle('')
     setDueDate('')
-    setStartDate('')
-    setEndDate('')
+    setStartDate(new Date().toISOString().split('T')[0])
     setAssigneeId('')
     setImportant(false)
     setShowOptional(false)
@@ -383,18 +380,23 @@ export default function TaskListView({
               )}
 
               <div className="option-row">
-                <label><CalendarDays size={14} /> Due date</label>
-                <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-              </div>
-
-              <div className="option-row">
                 <label><Play size={14} /> Start date</label>
-                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                <input
+                  type="date"
+                  value={startDate}
+                  max={dueDate || undefined}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
               </div>
 
               <div className="option-row">
                 <label><Flag size={14} /> End date</label>
-                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                <input
+                  type="date"
+                  value={dueDate}
+                  min={startDate || undefined}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
               </div>
 
               {people && people.length > 0 && (
@@ -449,6 +451,7 @@ export default function TaskListView({
             onMoveUp={listId && index > 0 ? () => onMoveTask(task.id, -1) : null}
             onMoveDown={listId && index < activeTasks.length - 1 ? () => onMoveTask(task.id, 1) : null}
             lists={lists}
+            groups={groups}
             onMoveTaskToList={onMoveTaskToList}
           />
         ))}
@@ -479,6 +482,7 @@ export default function TaskListView({
                   onMoveUp={listId && index > 0 ? () => onMoveTask(task.id, -1) : null}
                   onMoveDown={listId && index < completedTasks.length - 1 ? () => onMoveTask(task.id, 1) : null}
                   lists={lists}
+                  groups={groups}
                   onMoveTaskToList={onMoveTaskToList}
                 />
               ))}
