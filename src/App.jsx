@@ -166,18 +166,6 @@ export default function App() {
       tasks = tasks.filter((t) => !t.important)
     }
 
-    if (filters.listId) {
-      tasks = tasks.filter((t) => t.listId === filters.listId)
-    }
-
-    if (filters.groupId) {
-      const group = data.groups.find((g) => g.id === filters.groupId)
-      if (group) {
-        const listIds = new Set(group.listIds)
-        tasks = tasks.filter((t) => listIds.has(t.listId))
-      }
-    }
-
     if (filters.personId) {
       tasks = tasks.filter((t) => (t.assigneeIds || []).includes(filters.personId))
     }

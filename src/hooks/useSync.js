@@ -4,7 +4,7 @@ const UPSTASH_URL_KEY = 'todo-sync-upstash-url'
 const UPSTASH_TOKEN_KEY = 'todo-sync-upstash-token'
 const LOCAL_LAST_SYNCED_KEY = 'todo-sync-lastSyncedAt'
 const BASELINES_KEY = 'todo-sync-baselines'
-const AUTO_SYNC_DELAY = 90_000
+const AUTO_SYNC_DELAY = 3_000
 
 const DATA_KEYS = ['groups', 'lists', 'tasks', 'people', 'tags', 'settings']
 const SYNC_TIMESTAMP_KEY = 'todo:syncedAt'
@@ -436,13 +436,27 @@ export function useSync(data, { onAutoMerge } = {}) {
     }
   }, [isConfigured, data])
 
-  // Verify connection on mount when credentials exist
+  // Verify connection on mount and auto-pull when credentials exist
   useEffect(() => {
     if (!isConfigured) return
-    testConnection(upstashUrl, upstashToken).then((ok) => {
+    let cancelled = false
+    testConnection(upstashUrl, upstashToken).then(async (ok) => {
+      if (cancelled) return
       setConnectionOk(ok)
-      if (!ok) setSyncError('Connection failed')
+      if (!ok) {
+        setSyncError('Connection failed')
+        return
+      }
+      // Auto-pull on first load
+      const baselines = loadBaselines()
+      const result = await executePull(upstashUrl, upstashToken, dataRef.current, baselines, false)
+      if (cancelled || !result) return
+      saveBaselines(result.newBaselines)
+      recordLastSynced(result.syncedAt)
+      setSyncStatus('synced')
+      onAutoMergeRef.current?.(result.data)
     })
+    return () => { cancelled = true }
   }, [isConfigured, upstashUrl, upstashToken])
 
   // Auto-sync 90s after the last edit

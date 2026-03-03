@@ -163,18 +163,6 @@ export default function TaskListView({
             <button onClick={() => setFilter('tagId', null)}><X size={10} /></button>
           </span>
         )}
-        {filters?.listId && (
-          <span className="filter-chip">
-            List: {lists.find((l) => l.id === filters.listId)?.name || '?'}
-            <button onClick={() => setFilter('listId', null)}><X size={10} /></button>
-          </span>
-        )}
-        {filters?.groupId && (
-          <span className="filter-chip">
-            Group: {groups?.find((g) => g.id === filters.groupId)?.name || '?'}
-            <button onClick={() => setFilter('groupId', null)}><X size={10} /></button>
-          </span>
-        )}
         {filters?.personId && (
           <span className="filter-chip">
             Person: {people?.find((p) => p.id === filters.personId)?.name || '?'}
@@ -290,39 +278,6 @@ export default function TaskListView({
             </div>
           )}
 
-          {!listId && groups && groups.length > 0 && (
-            <div className="filter-group">
-              <div className="filter-label">Group</div>
-              <div className="filter-options">
-                {groups.map((g) => (
-                  <button
-                    key={g.id}
-                    className={`filter-option ${filters?.groupId === g.id ? 'active' : ''}`}
-                    onClick={() => setFilter('groupId', filters?.groupId === g.id ? null : g.id)}
-                  >
-                    {g.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {!listId && lists.length > 1 && (
-            <div className="filter-group">
-              <div className="filter-label">List</div>
-              <div className="filter-options">
-                {lists.map((l) => (
-                  <button
-                    key={l.id}
-                    className={`filter-option ${filters?.listId === l.id ? 'active' : ''}`}
-                    onClick={() => setFilter('listId', filters?.listId === l.id ? null : l.id)}
-                  >
-                    {l.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {people && people.length > 0 && (
             <div className="filter-group">
@@ -384,8 +339,11 @@ export default function TaskListView({
                 <input
                   type="date"
                   value={startDate}
-                  max={dueDate || undefined}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setStartDate(val)
+                    if (val && dueDate && val > dueDate) setDueDate(val)
+                  }}
                 />
               </div>
 
@@ -394,8 +352,11 @@ export default function TaskListView({
                 <input
                   type="date"
                   value={dueDate}
-                  min={startDate || undefined}
-                  onChange={(e) => setDueDate(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setDueDate(val)
+                    if (val && startDate && val < startDate) setStartDate(val)
+                  }}
                 />
               </div>
 

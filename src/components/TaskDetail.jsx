@@ -348,9 +348,13 @@ export default function TaskDetail({
             <input
               type="date"
               value={task.startDate ? task.startDate.split('T')[0] : ''}
-              max={task.dueDate ? task.dueDate.split('T')[0] : undefined}
               onChange={(e) => {
-                onUpdate(task.id, { startDate: e.target.value || null })
+                const val = e.target.value || null
+                const updates = { startDate: val }
+                if (val && task.dueDate && val > task.dueDate.split('T')[0]) {
+                  updates.dueDate = val
+                }
+                onUpdate(task.id, updates)
                 setShowStartPicker(false)
               }}
             />
@@ -381,9 +385,13 @@ export default function TaskDetail({
             <input
               type="date"
               value={task.dueDate ? task.dueDate.split('T')[0] : ''}
-              min={task.startDate ? task.startDate.split('T')[0] : undefined}
               onChange={(e) => {
-                onUpdate(task.id, { dueDate: e.target.value || null })
+                const val = e.target.value || null
+                const updates = { dueDate: val }
+                if (val && task.startDate && val < task.startDate.split('T')[0]) {
+                  updates.startDate = val
+                }
+                onUpdate(task.id, updates)
                 setShowDatePicker(false)
               }}
             />
