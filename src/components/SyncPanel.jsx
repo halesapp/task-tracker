@@ -138,7 +138,7 @@ export default function SyncPanel({
         )}
 
         <p className="sync-description" style={{ fontSize: 12, opacity: 0.7 }}>
-          Auto-syncs 90s after the last change. Press Cmd+S / Ctrl+S to sync immediately.
+          Auto-syncs 3s after the last change. Press Cmd+S / Ctrl+S to sync immediately.
         </p>
 
         <div className="sync-actions">
