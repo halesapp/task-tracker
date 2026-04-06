@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'preact/hooks'
 import {
   addDays,
   differenceInDays,
@@ -12,7 +12,7 @@ import {
   eachDayOfInterval,
   isToday,
 } from 'date-fns'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-preact'
 import { parseDate } from '../utils/date'
 
 const DAY_WIDTH = 40

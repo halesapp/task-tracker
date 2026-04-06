@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import { Plus, Trash2, Users, ChevronDown } from 'lucide-react'
+import { useState, useEffect, useRef } from 'preact/hooks'
+import { Plus, Trash2, Users, ChevronDown } from 'lucide-preact'
 
 const PERSON_COLORS = [
   '#0078d4', '#e74856', '#00cc6a', '#f7630c',

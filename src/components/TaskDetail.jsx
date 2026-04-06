@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState } from 'preact/hooks'
 import { parseDate } from '../utils/date'
 import {
   X,
@@ -13,7 +13,7 @@ import {
   AlertTriangle,
   ArrowUpRight,
   CornerDownRight,
-} from 'lucide-react'
+} from 'lucide-preact'
 
 const PRIORITIES = [
   { value: 'none', label: 'None', color: 'var(--text-tertiary)' },

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState } from 'preact/hooks'
 import {
   Plus,
   ClipboardList,
@@ -13,7 +13,7 @@ import {
   X,
   AlertTriangle,
   Tag,
-} from 'lucide-react'
+} from 'lucide-preact'
 import TaskItem from './TaskItem'
 
 const PRIORITIES = [

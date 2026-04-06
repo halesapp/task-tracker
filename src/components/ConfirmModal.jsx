@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react'
-import { Trash2, X } from 'lucide-react'
+import { useEffect, useRef } from 'preact/hooks'
+import { Trash2, X } from 'lucide-preact'
 
 export default function ConfirmModal({ message, confirmLabel = 'Delete', onConfirm, onClose }) {
   const cancelRef = useRef(null)

@@ -11,8 +11,8 @@ import {
   isSameDay,
   isToday,
 } from 'date-fns'
-import { useState } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState } from 'preact/hooks'
+import { ChevronLeft, ChevronRight } from 'lucide-preact'
 import { parseDate } from '../utils/date'
 
 const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { ChevronDown, ClipboardList } from 'lucide-react'
+import { useState } from 'preact/hooks'
+import { ChevronDown, ClipboardList } from 'lucide-preact'
 import TaskItem from './TaskItem'
 
 const SECTIONS = [

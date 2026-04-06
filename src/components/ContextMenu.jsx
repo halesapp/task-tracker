@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState, useEffect, useRef } from 'preact/hooks'
+import { ChevronLeft, ChevronRight } from 'lucide-preact'
 
 export default function ContextMenu({ x, y, items, onClose }) {
   const [expandedSubmenu, setExpandedSubmenu] = useState(null)

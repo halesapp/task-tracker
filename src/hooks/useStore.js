@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback } from 'preact/hooks'
 import { v4 as uuidv4 } from 'uuid'
 
 const STORAGE_KEY = 'todo-app-data'

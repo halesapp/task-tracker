@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Check, Star, CalendarDays, ListChecks, ArrowUp, ArrowDown, ChevronDown, List } from 'lucide-react'
+import { useState } from 'preact/hooks'
+import { Check, Star, CalendarDays, ListChecks, ArrowUp, ArrowDown, ChevronDown, List } from 'lucide-preact'
 import { format, isPast, isToday } from 'date-fns'
 import { parseDate } from '../utils/date'
 import ContextMenu from './ContextMenu'

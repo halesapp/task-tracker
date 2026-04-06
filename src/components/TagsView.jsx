@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Plus, Trash2, Tag } from 'lucide-react'
+import { useState } from 'preact/hooks'
+import { Plus, Trash2, Tag } from 'lucide-preact'
 
 export default function TagsView({ tags, tasks, onAddTag, onDeleteTag, onRenameTag, onUpdateTag }) {
   const [newName, setNewName] = useState('')

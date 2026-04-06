@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'preact/hooks'
 import Sidebar from './components/Sidebar'
 import TaskListView from './components/TaskListView'
 import TaskDetail from './components/TaskDetail'
@@ -8,15 +8,14 @@ import GanttView from './components/GanttView'
 import PriorityView from './components/PriorityView'
 import DeleteAllModal from './components/DeleteAllModal'
 import ConfirmModal from './components/ConfirmModal'
-import ConflictModal from './components/ConflictModal'
 import SearchOverlay from './components/SearchOverlay'
-import SyncPanel from './components/SyncPanel'
+import AuthPanel from './components/AuthPanel'
 import SettingsPanel from './components/SettingsPanel'
 import TagsView from './components/TagsView'
 import CompletedView from './components/CompletedView'
 import { useStore } from './hooks/useStore'
-import { useSync } from './hooks/useSync'
-import { Download, Upload } from 'lucide-react'
+import { useAuth } from './hooks/useAuth'
+import { Download, Upload } from 'lucide-preact'
 
 function loadDarkMode() {
   try {
@@ -31,17 +30,17 @@ function loadDarkMode() {
 export default function App() {
   const store = useStore()
   const { data, undo, canUndo, redo, canRedo, replaceData } = store
+  const auth = useAuth()
   const [activeView, setActiveView] = useState('_all')
   const [selectedTaskId, setSelectedTaskId] = useState(null)
   const [calendarSelectedDate, setCalendarSelectedDate] = useState(null)
   const [filters, setFilters] = useState({})
   const [showSearch, setShowSearch] = useState(false)
-  const [showSync, setShowSync] = useState(false)
+  const [showAuth, setShowAuth] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showDeleteAll, setShowDeleteAll] = useState(false)
   const [confirmModal, setConfirmModal] = useState(null) // { message, onConfirm }
   const [darkMode, setDarkMode] = useState(loadDarkMode)
-  const sync = useSync(data, { onAutoMerge: (merged) => replaceData(merged) })
   const fileInputRef = useRef(null)
   const addTaskInputRef = useRef(null)
 
@@ -79,12 +78,9 @@ export default function App() {
         e.preventDefault()
         setShowSearch(true)
       }
-      // Ctrl+S or Cmd+S for immediate sync
+      // Ctrl+S or Cmd+S — prevent default browser save
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault()
-        if (sync.isConfigured) {
-          sync.syncNow(data)
-        }
       }
       // Ctrl+N or Cmd+N for new task
       if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
@@ -102,7 +98,7 @@ export default function App() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [showSearch, selectedTaskId, sync, data, undo, canUndo, redo, canRedo])
+  }, [showSearch, selectedTaskId, data, undo, canUndo, redo, canRedo])
 
   const taskCounts = useMemo(() => {
     const counts = {}
@@ -314,26 +310,6 @@ export default function App() {
     setSelectedTaskId(taskId)
   }
 
-  async function handleSyncPush() {
-    await sync.push(data, { onMergedData: (m) => replaceData(m) })
-  }
-
-  async function handleSyncPull() {
-    const pulled = await sync.pull()
-    if (pulled) replaceData(pulled)
-  }
-
-  async function handleConflictKeepLocal() {
-    sync.dismissConflict()
-    await sync.push(data, { skipConflictCheck: true, onMergedData: (m) => replaceData(m) })
-  }
-
-  async function handleConflictUseRemote() {
-    sync.dismissConflict()
-    const pulled = await sync.pull({ skipConflictCheck: true })
-    if (pulled) replaceData(pulled)
-  }
-
   function handleDeleteAll() {
     localStorage.removeItem('todo-app-data')
     window.location.reload()
@@ -360,20 +336,6 @@ export default function App() {
         if (!(imported.groups && imported.lists && imported.tasks)) {
           alert('Invalid backup file format')
           return
-        }
-
-        if (sync.isConfigured) {
-          const hasExistingTasks = data.tasks.length > 0
-          const msg = hasExistingTasks
-            ? 'You have a cloud sync connection and existing tasks.\n\n' +
-              '• This will OVERWRITE all local tasks with the imported file.\n' +
-              '• The imported data will auto-sync to your database on the next sync cycle, replacing what\'s there.\n\n' +
-              'If you want to MERGE tasks instead, cancel and manually add them.\n\n' +
-              'Continue with overwrite?'
-            : 'You have a cloud sync connection.\n\n' +
-              'The imported data will auto-sync to your database on the next sync cycle.\n\n' +
-              'Continue?'
-          if (!confirm(msg)) return
         }
 
         localStorage.setItem('todo-app-data', JSON.stringify(imported))
@@ -423,10 +385,8 @@ export default function App() {
         onDeleteGroup={handleDeleteGroup}
         taskCounts={taskCounts}
         onOpenSearch={() => setShowSearch(true)}
-        onOpenSync={() => setShowSync(true)}
-        syncConnected={sync.isConfigured}
-        syncStatus={sync.syncStatus}
-        connectionOk={sync.connectionOk}
+        onOpenAuth={() => setShowAuth(true)}
+        user={auth.user}
         darkMode={darkMode}
         onToggleDarkMode={() => setDarkMode((d) => !d)}
         onDeleteAll={() => setShowDeleteAll(true)}
@@ -607,33 +567,19 @@ export default function App() {
         />
       )}
 
-      {showSync && (
-        <div className="search-overlay" onClick={() => setShowSync(false)}>
+      {showAuth && (
+        <div className="search-overlay" onClick={() => setShowAuth(false)}>
           <div onClick={(e) => e.stopPropagation()} style={{ paddingTop: 80 }}>
-            <SyncPanel
-              syncing={sync.syncing}
-              lastSynced={sync.lastSynced}
-              syncError={sync.syncError}
-              isConfigured={sync.isConfigured}
-              onSaveCredentials={sync.saveCredentials}
-              onClearCredentials={sync.clearCredentials}
-              onPush={handleSyncPush}
-              onPull={handleSyncPull}
-              onExport={handleExport}
-              fileInputRef={fileInputRef}
-              onClose={() => setShowSync(false)}
+            <AuthPanel
+              user={auth.user}
+              onSignIn={auth.signIn}
+              onSignUp={auth.signUp}
+              onSignOut={auth.signOut}
+              onResetPassword={auth.resetPassword}
+              onClose={() => setShowAuth(false)}
             />
           </div>
         </div>
-      )}
-
-      {sync.conflictInfo && (
-        <ConflictModal
-          conflictInfo={sync.conflictInfo}
-          onKeepLocal={handleConflictKeepLocal}
-          onUseRemote={handleConflictUseRemote}
-          onDismiss={sync.dismissConflict}
-        />
       )}
 
       {showSettings && (

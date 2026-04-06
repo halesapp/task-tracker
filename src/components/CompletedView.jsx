@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { Check, Trash2, CheckSquare, Square } from 'lucide-react'
+import { useState, useMemo } from 'preact/hooks'
+import { Check, Trash2, CheckSquare, Square } from 'lucide-preact'
 import { parseDate } from '../utils/date'
 import { format } from 'date-fns'
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState } from 'preact/hooks'
 import ContextMenu from './ContextMenu'
 import {
   Sun,
@@ -17,7 +17,7 @@ import {
   SunMedium,
   ArrowUp,
   ArrowDown,
-  Cloud,
+  User,
   Flag,
   Trash2,
   Tag,
@@ -25,7 +25,7 @@ import {
   FolderInput,
   Settings,
   CheckCircle2,
-} from 'lucide-react'
+} from 'lucide-preact'
 
 const smartLists = [
   { id: '_all', name: 'All Tasks', icon: Home, className: 'all-tasks' },
@@ -58,10 +58,8 @@ export default function Sidebar({
   onMoveListToGroup,
   taskCounts,
   onOpenSearch,
-  onOpenSync,
-  syncConnected,
-  syncStatus,
-  connectionOk,
+  onOpenAuth,
+  user,
   darkMode,
   onToggleDarkMode,
   onDeleteAll,
@@ -107,22 +105,12 @@ export default function Sidebar({
         </div>
         <h1>To Do</h1>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
-          {syncConnected && syncStatus && (
-            <span className={`sync-status-label ${syncStatus}`}>
-              {syncStatus === 'synced' ? 'Synced' : 'Modified'}
-            </span>
-          )}
           <button
-            className={`sidebar-icon-btn ${syncConnected ? 'sync-connected' : ''}`}
-            onClick={onOpenSync}
-            title="Cloud sync"
+            className={`sidebar-icon-btn ${user ? 'sync-connected' : ''}`}
+            onClick={onOpenAuth}
+            title={user ? user.email : 'Sign in'}
           >
-            <span className="sync-cloud-wrapper">
-              <Cloud size={16} />
-              {syncConnected && (
-                <span className={`sync-dot ${connectionOk === true ? 'ok' : connectionOk === false ? 'err' : ''}`} />
-              )}
-            </span>
+            <User size={16} />
           </button>
           <button
             className="sidebar-icon-btn"

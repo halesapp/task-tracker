@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { AlertTriangle, Trash2, X } from 'lucide-react'
+import { useState } from 'preact/hooks'
+import { AlertTriangle, Trash2, X } from 'lucide-preact'
 
 const CONFIRM_PHRASE = 'delete all project data'
 

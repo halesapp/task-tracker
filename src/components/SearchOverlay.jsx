@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
-import { Search, X, Check, Star, Tag } from 'lucide-react'
+import { useState, useRef, useEffect, useMemo } from 'preact/hooks'
+import { Search, X, Check, Star, Tag } from 'lucide-preact'
 
 export default function SearchOverlay({ tasks, lists, tags, onSelect, onClose }) {
   const [query, setQuery] = useState('')

@@ -1,4 +1,4 @@
-import { Settings, X, CalendarDays, Tag, Users, Type } from 'lucide-react'
+import { Settings, X, CalendarDays, Tag, Users, Type } from 'lucide-preact'
 
 const FONT_SIZE_MIN = 11
 const FONT_SIZE_MAX = 20
